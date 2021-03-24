@@ -1,0 +1,14 @@
+deploy:
+  stage: deploy
+  image: python:slim
+  before_script:
+    - 'apt-get update && apt-get install -y curl git'
+    - 'python3 -m pip install --user --upgrade setuptools wheel twine versioneer'
+  script:
+    - 'git describe'
+    - 'echo $CI_COMMIT_TAG'
+    - 'python3 setup.py test'
+    - 'python3 setup.py sdist bdist_wheel'
+    - 'python3 -m twine upload --verbose --repository-url https://ci.tno.nl/gitlab/api/v4/projects/$CI_PROJECT_ID/packages/pypi --username heatmatcher-pypi-access-token --password $PROJECT_TOKEN dist/*'
+  only:
+    - tags
