@@ -6,6 +6,8 @@ from esdl.resources.xmlresource import XMLResource
 from esdl import esdl
 from uuid import uuid4
 from io import BytesIO
+from esdl import __version__
+from esdl import support_functions
 
 
 class EnergySystemHandler:
@@ -26,34 +28,19 @@ class EnergySystemHandler:
         setattr(esdl.ProfileElement, 'from', esdl.ProfileElement.from_)
         alias('start', esdl.ProfileElement.from_)
 
-        # add support for shallow copying or cloning an object
-        # it copies the object's attributes (e.g. clone an object), does only shallow copying
-        def clone(self):
-            """
-            Shallow copying or cloning an object
-            It only copies the object's attributes (e.g. clone an object)
-            Usage object.clone() or copy.copy(object) (as _copy__() is also implemented)
-            :param self:
-            :return: A clone of the object
-            """
-            newone = type(self)()
-            eclass = self.eClass
-            for x in eclass.eAllStructuralFeatures():
-                if isinstance(x, EAttribute):
-                    newone.eSet(x.name, self.eGet(x.name))
-            return newone
 
-        setattr(EObject, '__copy__', clone)
-        setattr(EObject, 'clone', clone)
 
-        # def toJSON(self):
-        #     return json.dumps(self, default=lambda o: list(o),
-        #                       sort_keys=True, indent=4)
-        # setattr(EOrderedSet, 'toJSON', toJSON)
+        setattr(EObject, '__copy__', support_functions.clone)
+        setattr(EObject, 'clone', support_functions.clone)
+        setattr(EObject, '__deepcopy__', support_functions.deepcopy)
+        setattr(EObject, 'deepcopy', support_functions.deepcopy)
+
 
         # have a nice __repr__ for some ESDL classes when printing ESDL objects (includes all Assets and EnergyAssets)
-        esdl.EnergySystem.__repr__ = \
-            lambda x: '{}: ({})'.format(x.name, EnergySystemHandler.attr_to_dict(x))
+        esdl.EnergySystem.__repr__ = lambda x: '{}({})'.format(type(x).__name__, EnergySystemHandler.attr_to_dict(x))
+        esdl.EnergyAsset.__repr__ = lambda x: '{}({})'.format(type(x).__name__, EnergySystemHandler.attr_to_dict(x))
+        esdl.Instance.__repr__ = lambda x: '{}({})'.format(type(x).__name__, EnergySystemHandler.attr_to_dict(x))
+        esdl.Area.__repr__ = lambda x: '{}({})'.format(type(x).__name__, EnergySystemHandler.attr_to_dict(x))
 
     def _new_resource_set(self):
         """Resets the resourceset (e.g. when loading a new file)"""
@@ -99,15 +86,6 @@ class EnergySystemHandler:
         # return the string
         return uri.getvalue()
 
-    def to_string(self, es_id, es_name):
-        # to use strings as resources, we simulate a string as being a URI
-        uri = StringURI('to_string.esdl')
-        self.resource.contents[0].id = es_id
-        self.resource.contents[0].name = es_name
-        self.resource.save(uri)
-        # return the string
-        return uri.getvalue()
-
     def to_bytesio(self):
         """Returns a BytesIO stream for the energy system"""
         uri = StringURI('to_string.esdl')
@@ -135,7 +113,7 @@ class EnergySystemHandler:
         return self.energy_system
 
     # Using this function you can query for objects by ID
-    # After loading an ESDL-file, all objects that have an ID defines are stored in resource.uuid_dict automatically
+    # When loading an ESDL-file, all objects that have an ID defined are stored in resource.uuid_dict automatically
     # Note: If you add things later to the resource, it won't be added automatically to this dictionary though.
     # Use get_by_id_slow() for that
     def get_by_id(self, object_id):
@@ -185,14 +163,14 @@ class EnergySystemHandler:
         return str(uuid4())
 
     def create_empty_energy_system(self, name, es_description, inst_title, area_title):
-        es_id = str(uuid4())
+        es_id = self.generate_uuid()
         self.energy_system = esdl.EnergySystem(id=es_id, name=name, description=es_description)
 
-        instance = esdl.Instance(id=str(uuid4()), name=inst_title)
+        instance = esdl.Instance(id=self.generate_uuid(), name=inst_title)
         self.energy_system.instance.append(instance)
 
         # TODO: check if this (adding scope) solves error????
-        area = esdl.Area(id=str(uuid4()), name=area_title, scope=esdl.AreaScopeEnum.from_string('UNDEFINED'))
+        area = esdl.Area(id=self.generate_uuid(), name=area_title, scope=esdl.AreaScopeEnum.from_string('UNDEFINED'))
         instance.area = area
 
         self.resource = self.rset.create_resource(StringURI('string_resource.esdl'))
@@ -204,61 +182,20 @@ class EnergySystemHandler:
     # The pyEcore classes by default do not allow for simple serialization for Session management in Flask.
     # Internally Flask Sessions use Pickle to serialize a data structure by means of its __dict__. This does not work.
     # Furthermore, ESDL can contain cyclic relations. Therefore we serialize to XMI and back if necessary.
+    # This is not effiecent with large ESDLs
     def __getstate__(self):
         state = dict()
-        # print('Serialize rset {}'.format(self.rset.resources))
-        print('Serializing EnergySystem...', end="")
         state['energySystem'] = self.to_string();
-        print('done')
         return state
 
     def __setstate__(self, state):
         self.__init__()
-        # print('Deserialize rset {}'.format(self.rset.resources))
-        print('Deserializing EnergySystem...', end="")
         self.load_from_string(state['energySystem'])
-        print('done')
 
     @staticmethod
-    def get_asset_attributes(asset, esdl_doc=None):
-        attributes = list()
-        for x in asset.eClass.eAllStructuralFeatures():
-            # print('{} is of type {}'.format(x.name, x.eClass.name))
-            if isinstance(x, EAttribute):
-                attr = dict()
-                attr['name'] = x.name
-                attr['type'] = x.eType.name
-                # if isinstance(x., EEnum):
-                #    attr['value'] = list(es.eGet(x))
-                attr['value'] = asset.eGet(x)
-                if attr['value'] is not None:
-                    if x.many:
-                        if isinstance(attr['value'], EOrderedSet):
-                            attr['value'] = [x.name for x in attr['value']]
-                            attr['many'] = True
-                        else:
-                            attr['value'] = list(x.eType.to_string(attr['value']))
-                    else:
-                        attr['value'] = x.eType.to_string(attr['value'])
-                if isinstance(x.eType, EEnum):
-                    attr['type'] = 'EEnum'
-                    attr['enum_type'] = x.eType.name
-                    attr['options'] = list(lit.name for lit in x.eType.eLiterals)
-                    attr['default'] = x.eType.default_value.name
-                else:
-                    attr['default'] = x.eType.default_value
-                    if x.eType.default_value is not None:
-                        attr['default'] = x.eType.to_string(x.eType.default_value)
-                if x.eType.name == 'EBoolean':
-                    attr['options'] = ['true', 'false']
-                attr['doc'] = x.__doc__
-                if x.__doc__ is None and esdl_doc is not None:
-                    attr['doc'] = esdl_doc.get_doc(asset.eClass.name, x.name)
-
-                attributes.append(attr)
-        print(attributes)
-        attrs_sorted = sorted(attributes, key=lambda a: a['name'])
-        return attrs_sorted
+    def version():
+        '''Returns the version of pyESDL'''
+        return __version__
 
 
 class StringURI(URI):

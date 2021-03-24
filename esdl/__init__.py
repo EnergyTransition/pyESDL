@@ -240,3 +240,7 @@ for subpack in eSubpackages:
 register_packages = [esdl] + eSubpackages
 for pack in register_packages:
     global_registry[pack.nsURI] = pack
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
