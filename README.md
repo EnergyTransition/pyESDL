@@ -1,29 +1,76 @@
-# HeatMatcher
+# pyESDL
 
-This python code base is a re-implementation of the Java-based HeatMatcher
+pyESDL is a library for using ESDL in python programs. ESDL stands for Energy System Description
+Language and is created to support developers creating, parsing, generating ESDL-files with the 
+goal to create interoperable energy system transition tooling.
+
+This package contains all the ESDL classes of the ESDL language and an `EnergySystemHandler`
+that helps the developer to read and write ESDL-files.
+
+More information about ESDL can be found at:
+1. [ESDL gitbook documentation](https://energytransition.gitbook.io/esdl/) with a general introduction,
+   example applications and some code samples.
+2. [ESDL Model Reference documentation](https://energytransition.github.io/) that describes all the 
+   classes and definitions in detail using a clickable UML diagram.
 
 ## Installing
-use the following command to install the HeatMatcher python module from the CI PyPi registry:
+Use the following command to install the pyESDL python module from the PyPi registry:
 
-`pip install HeatMatcher --extra-index-url https://__token__:<your_personal_token>@ci.tno.nl/gitlab/api/v4/projects/7530/packages/pypi/simple`
+`pip install pyESDL`
 
-## Releasing a new version
+
+## Usage
+
+### Example 1 - Creating an ESDL-file and saving it to disk
+```python
+from esdl.esdl_handler import EnergySystemHandler
+from esdl import esdl
+esh = EnergySystemHandler()
+es = esh.create_empty_energy_system(name="ES1", es_description='Nice Energy System',
+                                   inst_title='instance 1', area_title="Area 51")
+print(es)
+esh.save(filename="test.esdl")
+```
+
+### Example 2 - Loading an ESDL file and adding a WindTurbine to an area
+```python
+from esdl.esdl_handler import EnergySystemHandler
+from esdl import esdl
+from pprint import pprint
+
+esh = EnergySystemHandler()
+# load an ESDL file and use type hinting to help the IDE to do auto completion
+es: esdl.EnergySystem = esh.load_file('test.esdl')
+print(es)
+# Create a WindTurbine
+wind_turbine = esdl.WindTurbine(name='WindTurbine at coast', rotorDiameter=50.0, height=100.0,
+                               type=esdl.WindTurbineTypeEnum.WIND_ON_COAST)
+
+# print the wind turbines properties in ESDL as a dict
+pprint(esh.attr_to_dict(wind_turbine))
+
+# Get the area where this windturbine should be added
+area51: esdl.Area = es.instance[0].area
+# add the WindTurbine to the area
+area51.asset.append(wind_turbine)
+# save the file
+esh.save()
+
+# Give the WindTurbine a location on the map
+location = esdl.Point(lat=52.6030475337285, lon=4.729614257812501)
+wind_turbine.geometry = location
+
+esh.save()
+# Convert the Energy System to an XML string and print it
+xml_string = esh.to_string()
+print(xml_string)
+```
+
+
+
+## Releasing
+The release process is as follows:
 1. Do a `git tag` with the new version number
 2. Do `python setup.py sdist bdist_wheel` to create the tarball and wheel in the `dist` folder
-3. Create a .pypirc with the following content:
-    ```
-    [distutils]
-    index-servers = gitlab
-    
-    [gitlab]
-    repository = https://ci.tno.nl/api/v4/projects/7530/packages/pypi
-    username = __token__
-    password = <your personal access token>
-    ```  
-    and replace password with the personal access token in gitlab (See User->Settings). 
-`7530` is the project ID for the HeatMatcher project.
-
-4. Issue `python -m twine upload --repository gitlab dist/*` to push it to the PyPi repo in gitlab
-
-##### TODO: make releasing part of CI/CD
+3. upload to PyPi: `python3 -m twine upload --repository testpypi dist/*`
 
