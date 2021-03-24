@@ -6,6 +6,7 @@ from esdl.resources.xmlresource import XMLResource
 from esdl import esdl
 from uuid import uuid4
 from io import BytesIO
+from esdl import __version__
 
 
 class EnergySystemHandler:
@@ -53,7 +54,7 @@ class EnergySystemHandler:
 
         # have a nice __repr__ for some ESDL classes when printing ESDL objects (includes all Assets and EnergyAssets)
         esdl.EnergySystem.__repr__ = \
-            lambda x: '{}: ({})'.format(x.name, EnergySystemHandler.attr_to_dict(x))
+            lambda x: '{}({})'.format(type(x).__name__, EnergySystemHandler.attr_to_dict(x))
 
     def _new_resource_set(self):
         """Resets the resourceset (e.g. when loading a new file)"""
@@ -135,7 +136,7 @@ class EnergySystemHandler:
         return self.energy_system
 
     # Using this function you can query for objects by ID
-    # After loading an ESDL-file, all objects that have an ID defines are stored in resource.uuid_dict automatically
+    # When loading an ESDL-file, all objects that have an ID defined are stored in resource.uuid_dict automatically
     # Note: If you add things later to the resource, it won't be added automatically to this dictionary though.
     # Use get_by_id_slow() for that
     def get_by_id(self, object_id):
@@ -185,14 +186,14 @@ class EnergySystemHandler:
         return str(uuid4())
 
     def create_empty_energy_system(self, name, es_description, inst_title, area_title):
-        es_id = str(uuid4())
+        es_id = self.generate_uuid()
         self.energy_system = esdl.EnergySystem(id=es_id, name=name, description=es_description)
 
-        instance = esdl.Instance(id=str(uuid4()), name=inst_title)
+        instance = esdl.Instance(id=self.generate_uuid(), name=inst_title)
         self.energy_system.instance.append(instance)
 
         # TODO: check if this (adding scope) solves error????
-        area = esdl.Area(id=str(uuid4()), name=area_title, scope=esdl.AreaScopeEnum.from_string('UNDEFINED'))
+        area = esdl.Area(id=self.generate_uuid(), name=area_title, scope=esdl.AreaScopeEnum.from_string('UNDEFINED'))
         instance.area = area
 
         self.resource = self.rset.create_resource(StringURI('string_resource.esdl'))
@@ -204,20 +205,15 @@ class EnergySystemHandler:
     # The pyEcore classes by default do not allow for simple serialization for Session management in Flask.
     # Internally Flask Sessions use Pickle to serialize a data structure by means of its __dict__. This does not work.
     # Furthermore, ESDL can contain cyclic relations. Therefore we serialize to XMI and back if necessary.
+    # This is not effiecent with large ESDLs
     def __getstate__(self):
         state = dict()
-        # print('Serialize rset {}'.format(self.rset.resources))
-        print('Serializing EnergySystem...', end="")
         state['energySystem'] = self.to_string();
-        print('done')
         return state
 
     def __setstate__(self, state):
         self.__init__()
-        # print('Deserialize rset {}'.format(self.rset.resources))
-        print('Deserializing EnergySystem...', end="")
         self.load_from_string(state['energySystem'])
-        print('done')
 
     @staticmethod
     def get_asset_attributes(asset, esdl_doc=None):
@@ -256,9 +252,14 @@ class EnergySystemHandler:
                     attr['doc'] = esdl_doc.get_doc(asset.eClass.name, x.name)
 
                 attributes.append(attr)
-        print(attributes)
+        #print(attributes)
         attrs_sorted = sorted(attributes, key=lambda a: a['name'])
         return attrs_sorted
+
+    @staticmethod
+    def version():
+        '''Returns the version of pyESDL'''
+        return __version__
 
 
 class StringURI(URI):
