@@ -132,24 +132,24 @@ class EnergySystemHandler:
         if object_id in self.resource.uuid_dict:
             return self.resource.uuid_dict[object_id]
         else:
-            print('Can\'t find asset for id={} in uuid_dict of the ESDL model'.format(object_id))
-            raise KeyError('Can\'t find asset for id={} in uuid_dict of the ESDL model'.format(object_id))
+            print('Can\'t find object for id={} in uuid_dict of the ESDL model'.format(object_id))
+            raise KeyError('Can\'t find object for id={} in uuid_dict of the ESDL model'.format(object_id))
             return None
 
-    def add_asset(self, asset):
-        if hasattr(asset, 'id'):
+    def add_object(self, obj):
+        if hasattr(obj, 'id'):
             if id is not None:
-                self.resource.uuid_dict[asset.id] = asset
+                self.resource.uuid_dict[obj.id] = obj
             else:
-                print('Id has not been set for asset {}({})', asset.eClass.name, asset)
+                print('Id has not been set for object {}({})', obj.eClass.name, obj)
 
-    def remove_asset(self, asset):
-        if hasattr(asset, 'id'):
+    def remove_object(self, obj):
+        if hasattr(obj, 'id'):
             if id is not None:
-                del self.resource.uuid_dict[asset.id]
+                del self.resource.uuid_dict[obj.id]
 
-    def remove_asset_by_id(self, asset_id):
-        del self.resource.uuid_dict[asset_id]
+    def remove_obj_by_id(self, obj_id):
+        del self.resource.uuid_dict[obj_id]
 
     # Creates a dict of all the attributes of an ESDL object, useful for printing/debugging
     @staticmethod
