@@ -42,13 +42,10 @@ class EnergySystemHandler:
         setattr(esdl.ProfileElement, 'from', esdl.ProfileElement.from_)
         alias('start', esdl.ProfileElement.from_)
 
-
-
         setattr(EObject, '__copy__', support_functions.clone)
         setattr(EObject, 'clone', support_functions.clone)
         setattr(EObject, '__deepcopy__', support_functions.deepcopy)
         setattr(EObject, 'deepcopy', support_functions.deepcopy)
-
 
         # have a nice __repr__ for the EnergySystem class when printing. As most objects are linked together
         # we don't do this for other classes, due to recursion.

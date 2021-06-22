@@ -1,9 +1,0 @@
-.idea/
-__pycache__/
-dist/
-build/
-*.pyc
-venv*/
-*.log
-MANIFEST
-*.egg-info
