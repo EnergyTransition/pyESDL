@@ -67,6 +67,9 @@ print(xml_string)
 ```
 
 ## Changes
+### Version 21.7.1
+- Add support for ESDL release 21.7 (with BufferDistance, ATES)
+
 #### Version 21.6.2
 - Fix issue with version definition, making the EnergySystemHandler unusable.
 - Add get_all_instances_of_type() to EnergySystemHandler to retrieve all the instances of a certain type in an EnergySystem.
