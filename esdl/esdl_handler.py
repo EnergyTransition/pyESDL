@@ -20,8 +20,8 @@ from esdl.resources.xmlresource import XMLResource
 from esdl import esdl
 from uuid import uuid4
 from io import BytesIO
-from esdl import __version__
 from esdl import support_functions
+
 
 
 class EnergySystemHandler:
@@ -148,6 +148,13 @@ class EnergySystemHandler:
     def remove_obj_by_id(self, obj_id):
         del self.resource.uuid_dict[obj_id]
 
+    def get_all_instances_of_type(self, esdl_type):
+        all_instances = list()
+        for esdl_element in self.get_energy_system().eAllContents():
+            if isinstance(esdl_element, esdl_type):
+                all_instances.append(esdl_element)
+        return all_instances
+
     # Creates a dict of all the attributes of an ESDL object, useful for printing/debugging
     @staticmethod
     def attr_to_dict(esdl_object):
@@ -184,7 +191,7 @@ class EnergySystemHandler:
     # The pyEcore classes by default do not allow for simple serialization for Session management in Flask.
     # Internally Flask Sessions use Pickle to serialize a data structure by means of its __dict__. This does not work.
     # Furthermore, ESDL can contain cyclic relations. Therefore we serialize to XMI and back if necessary.
-    # This is not effiecent with large ESDLs
+    # This is not efficient with large ESDLs
     def __getstate__(self):
         state = dict()
         state['energySystem'] = self.to_string();
@@ -198,6 +205,12 @@ class EnergySystemHandler:
     def version():
         '''Returns the version of pyESDL'''
         return __version__
+
+
+'''Version information about pyESDL'''
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
 
 
 class StringURI(URI):

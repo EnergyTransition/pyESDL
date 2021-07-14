@@ -66,11 +66,20 @@ xml_string = esh.to_string()
 print(xml_string)
 ```
 
+## Changes
+#### Version 21.6.2
+- Fix issue with version definition, making the EnergySystemHandler unusable.
+- Add get_all_instances_of_type() to EnergySystemHandler to retrieve all the instances of a certain type in an EnergySystem.
+  
+  E.g. ```esh.get_all_instances_of_type(esdl.GenericProfile)``` will give you all the profiles defined in the EnergySystem.
+
+#### Version 21.6.1
+- Add support for InputOutputRelation 
 
 
 ## Releasing
 The release process is as follows:
 1. Do a `git tag` with the new version number
 2. Do `python setup.py sdist bdist_wheel` to create the tarball and wheel in the `dist` folder
-3. upload to PyPi: `python3 -m twine upload --repository testpypi dist/*`
+3. upload to PyPi: `python3 -m twine upload --repository pyESDL dist/*`
 
