@@ -30,6 +30,15 @@ class TestPyESDL(unittest.TestCase):
         pprint(copy)
         pprint(esh.attr_to_dict(copy))
 
+    def test_error_attribute(self):
+        esh = EnergySystemHandler()
+        # this should print a warning:
+        # Attribute 'trype' does not exists for type WindTurbine and is ignored (asset line 5).
+        print("Expect warning: Attribute 'trype' does not exists for type WindTurbine and is ignored (asset line 5).")
+        esh.load_file('test_attr_error.esdl')
+
+
+
 
     def test_example1(self):
         esh = EnergySystemHandler()
