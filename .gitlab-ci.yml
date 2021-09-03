@@ -1,6 +1,6 @@
 deploy:
   stage: deploy
-  image: python:slim
+  image: python:3.7-slim
   before_script:
     - 'apt-get update && apt-get install -y curl git'
     - 'python3 -m pip install --user --upgrade setuptools wheel twine versioneer'
