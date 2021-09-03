@@ -35,7 +35,12 @@ class TestPyESDL(unittest.TestCase):
         # this should print a warning:
         # Attribute 'trype' does not exists for type WindTurbine and is ignored (asset line 5).
         print("Expect warning: Attribute 'trype' does not exists for type WindTurbine and is ignored (asset line 5).")
-        esh.load_file('test_attr_error.esdl')
+        try:
+            esh.load_file('test_attr_error.esdl')
+        except FileNotFoundError as e:  # when running from command line
+            esh.load_file('tests/test_attr_error.esdl')
+        self.assertEqual(["Attribute 'trype' does not exists for type WindTurbine and is ignored (asset line 5)."], esh.resource.get_parse_information())
+
 
 
 

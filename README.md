@@ -67,6 +67,9 @@ print(xml_string)
 ```
 
 ## Changes
+### Version 21.9.0
+- Fix pyecore 0.12.1 dependency issue
+
 ### Version 21.7.1
 - Add support for ESDL release 21.7 (with BufferDistance, ATES)
 
