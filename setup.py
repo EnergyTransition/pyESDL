@@ -40,6 +40,7 @@ setuptools.setup(
     author_email='ewoud.werkman@tno.nl',
     python_requires='>=3.7',
     install_requires=[
+        'future-fstrings==1.2.0',
         'pyecore==0.12.1'
     ],
     test_suite='setup.my_test_suite'
