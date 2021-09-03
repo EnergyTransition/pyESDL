@@ -1,5 +1,6 @@
 versioneer==0.19 # for versioning everything
 pyecore==0.12.1 # for reading esdl files
+future-fstrings==1.2.0 # required by pyEcore
 pyecoregen==0.5.0 # for generating esdl classes
 twine>=3.4.1 # for publishing in the PyPi repo
 wheel==0.36.2 # for generation a bdist_wheel with python setup.py sdist bdist_wheel
