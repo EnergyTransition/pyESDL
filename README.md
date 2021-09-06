@@ -67,6 +67,9 @@ print(xml_string)
 ```
 
 ## Changes
+### Version 21.9.1
+- Add support for ESDL release 21.9 (with pipe and cable relations)
+
 ### Version 21.9.0
 - Fix pyecore 0.12.1 dependency issue
 
