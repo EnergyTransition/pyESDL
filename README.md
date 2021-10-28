@@ -67,6 +67,10 @@ print(xml_string)
 ```
 
 ## Changes
+
+### Version 21.10.0
+- Add support for ESDL release 21.10 (with storage volumes)
+
 ### Version 21.9.1
 - Add support for ESDL release 21.9 (with pipe and cable relations)
 
