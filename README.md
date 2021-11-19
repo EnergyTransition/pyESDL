@@ -68,7 +68,10 @@ print(xml_string)
 
 ## Changes
 
-### Version 21.10.0
+### Version 21.11.0
+- Add support for ESDL release 21.11 (with HybridHeatpump, developmentCosts, Commodity emission attribute)
+
+ ### Version 21.10.0
 - Add support for ESDL release 21.10 (with storage volumes)
 
 ### Version 21.9.1
