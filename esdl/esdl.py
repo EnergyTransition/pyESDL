@@ -1794,8 +1794,9 @@ class PortRelation(EObject, metaclass=MetaEClass):
     ratio = EAttribute(eType=EDouble, unique=True, derived=False,
                        changeable=True, default_value=0.0)
     port = EReference(ordered=True, unique=True, containment=False, derived=False)
+    quantityAndUnit = EReference(ordered=True, unique=True, containment=True, derived=False)
 
-    def __init__(self, *, ratio=None, port=None):
+    def __init__(self, *, ratio=None, port=None, quantityAndUnit=None):
         # if kwargs:
         #    raise AttributeError('unexpected arguments: {}'.format(kwargs))
 
@@ -1806,6 +1807,9 @@ class PortRelation(EObject, metaclass=MetaEClass):
 
         if port is not None:
             self.port = port
+
+        if quantityAndUnit is not None:
+            self.quantityAndUnit = quantityAndUnit
 
 
 class BufferDistance(EObject, metaclass=MetaEClass):
@@ -2737,8 +2741,9 @@ class InputOutputRelation(AbstractBehaviour):
     mainPortRelation = EReference(ordered=True, unique=True,
                                   containment=True, derived=False, upper=-1)
     mainPort = EReference(ordered=True, unique=True, containment=False, derived=False)
+    mainPortQuantityAndUnit = EReference(ordered=True, unique=True, containment=True, derived=False)
 
-    def __init__(self, *, mainPortRelation=None, mainPort=None, **kwargs):
+    def __init__(self, *, mainPortRelation=None, mainPort=None, mainPortQuantityAndUnit=None, **kwargs):
 
         super().__init__(**kwargs)
 
@@ -2747,6 +2752,9 @@ class InputOutputRelation(AbstractBehaviour):
 
         if mainPort is not None:
             self.mainPort = mainPort
+
+        if mainPortQuantityAndUnit is not None:
+            self.mainPortQuantityAndUnit = mainPortQuantityAndUnit
 
 
 @abstract

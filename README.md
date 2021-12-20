@@ -68,6 +68,9 @@ print(xml_string)
 
 ## Changes
 
+### Version 21.12.0
+- Add support for ESDL release 21.12 (with quantity and unit information for InputOutputRelation)
+
 ### Version 21.11.0
 - Add support for ESDL release 21.11 (with HybridHeatpump, developmentCosts, Commodity emission attribute)
 
