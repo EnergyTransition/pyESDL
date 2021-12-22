@@ -748,8 +748,8 @@ class StringItem(EObject, metaclass=MetaEClass):
             self.value = value
 
 
-class EnergyLabelPerc(EObject, metaclass=MetaEClass):
-    """Defines an energy label and a percentage, used in EnergyLabelDistribution"""
+class EnergyLabelBin(EObject, metaclass=MetaEClass):
+    """Defines a bin for an energy label with a percentage, used in EnergyLabelDistribution"""
     energyLabel = EAttribute(eType=EnergyLabelEnum, unique=True, derived=False, changeable=True)
     percentage = EAttribute(eType=EDouble, unique=True, derived=False, changeable=True)
 
@@ -1366,8 +1366,8 @@ class BuildingUsageInformation(EObject, metaclass=MetaEClass):
             self.buildingUsage.extend(buildingUsage)
 
 
-class BuildingTypePercentage(EObject, metaclass=MetaEClass):
-    """Specifies the percentage of the selected building type"""
+class BuildingTypeBin(EObject, metaclass=MetaEClass):
+    """Defines a bin for a building type with a percentage, used in BuildingTypeDistribution """
     buildingType = EAttribute(eType=BuildingTypeEnum, unique=True, derived=False, changeable=True)
     percentage = EAttribute(eType=EDouble, unique=True, derived=False, changeable=True)
 
@@ -1384,8 +1384,8 @@ class BuildingTypePercentage(EObject, metaclass=MetaEClass):
             self.percentage = percentage
 
 
-class ResidentialBuildingTypePercentage(EObject, metaclass=MetaEClass):
-    """Specifies the percentage of the selected residential building type"""
+class ResidentialBuildingTypeBin(EObject, metaclass=MetaEClass):
+    """Defines a bin for a residential building type with a percentage, used in ResidentialBuildingTypeDistribution """
     residentialBuildingType = EAttribute(
         eType=ResidentialBuildingTypeEnum, unique=True, derived=False, changeable=True)
     percentage = EAttribute(eType=EDouble, unique=True, derived=False, changeable=True)
@@ -1403,8 +1403,8 @@ class ResidentialBuildingTypePercentage(EObject, metaclass=MetaEClass):
             self.percentage = percentage
 
 
-class OwnershipRentalTypePercentage(EObject, metaclass=MetaEClass):
-    """Specifies the percentage of the selected housing type"""
+class OwnershipRentalTypeBin(EObject, metaclass=MetaEClass):
+    """Defines a bin for a ownership/rental type with a percentage, used in OwnershipRentalTypeDistribution """
     ownershipRentalType = EAttribute(eType=OwnershipRentalTypeEnum, unique=True,
                                      derived=False, changeable=True, default_value=OwnershipRentalTypeEnum.UNDEFINED)
     percentage = EAttribute(eType=EDouble, unique=True, derived=False, changeable=True)
@@ -2908,14 +2908,14 @@ class StringLabelDistribution(GenericLabelDistribution):
 
 class EnergyLabelDistribution(SpecificLabelDistribution):
     """Defines a distribution in terms of energy labels"""
-    labelPerc = EReference(ordered=True, unique=True, containment=True, derived=False, upper=-1)
+    bin = EReference(ordered=True, unique=True, containment=True, derived=False, upper=-1)
 
-    def __init__(self, *, labelPerc=None, **kwargs):
+    def __init__(self, *, bin=None, **kwargs):
 
         super().__init__(**kwargs)
 
-        if labelPerc:
-            self.labelPerc.extend(labelPerc)
+        if bin:
+            self.bin.extend(bin)
 
 
 class FromToDistribution(GenericLabelDistribution):
@@ -3239,41 +3239,38 @@ class SearchAreaSolar(Potential):
 
 class BuildingTypeDistribution(SpecificLabelDistribution):
     """Specifies the way the building type is distributed in this area (e.g. Utility, Residential), specifing the percentage of buildings per type."""
-    buildingTypePercentage = EReference(
-        ordered=True, unique=True, containment=True, derived=False, upper=-1)
+    bin = EReference(ordered=True, unique=True, containment=True, derived=False, upper=-1)
 
-    def __init__(self, *, buildingTypePercentage=None, **kwargs):
+    def __init__(self, *, bin=None, **kwargs):
 
         super().__init__(**kwargs)
 
-        if buildingTypePercentage:
-            self.buildingTypePercentage.extend(buildingTypePercentage)
+        if bin:
+            self.bin.extend(bin)
 
 
 class ResidentialBuildingTypeDistribution(SpecificLabelDistribution):
     """Specifies the way the residential building type is distributed in this area (e.g. Vrijstaande Woning, Hoekwoning, Flatwoning), specifing the percentage of buildings per residential type."""
-    residentialBuildingTypePercentage = EReference(
-        ordered=True, unique=True, containment=True, derived=False, upper=-1)
+    bin = EReference(ordered=True, unique=True, containment=True, derived=False, upper=-1)
 
-    def __init__(self, *, residentialBuildingTypePercentage=None, **kwargs):
+    def __init__(self, *, bin=None, **kwargs):
 
         super().__init__(**kwargs)
 
-        if residentialBuildingTypePercentage:
-            self.residentialBuildingTypePercentage.extend(residentialBuildingTypePercentage)
+        if bin:
+            self.bin.extend(bin)
 
 
 class OwnershipRentalTypeDistribution(SpecificLabelDistribution):
     """Specifies the way the housing type is distributed in this area (e.g. Owner occupied, Housing Association, Private Rental), specifing the percentage of buildings per housing type."""
-    ownershipRentalTypePercentage = EReference(
-        ordered=True, unique=True, containment=True, derived=False, upper=-1)
+    bin = EReference(ordered=True, unique=True, containment=True, derived=False, upper=-1)
 
-    def __init__(self, *, ownershipRentalTypePercentage=None, **kwargs):
+    def __init__(self, *, bin=None, **kwargs):
 
         super().__init__(**kwargs)
 
-        if ownershipRentalTypePercentage:
-            self.ownershipRentalTypePercentage.extend(ownershipRentalTypePercentage)
+        if bin:
+            self.bin.extend(bin)
 
 
 class CompoundMatter(Matter):
