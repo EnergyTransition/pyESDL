@@ -68,6 +68,9 @@ print(xml_string)
 
 ## Changes
 
+### Version 22.7.0
+- Add support for ESDL release 22.07 (with ConnectableAsset, ExposedPortsAsset, PumpedHydroPower and CAES assets, restructured some LabelJump information, asset Constraints)
+
 ### Version 21.12.0
 - Add support for ESDL release 21.12 (with quantity and unit information for InputOutputRelation, renaming of some distribution information classes of AggregatedBuildings)
 
