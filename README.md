@@ -68,6 +68,9 @@ print(xml_string)
 
 ## Changes
 
+### Version 22.10.0
+- Add support for ESDL release 22.10 (with Port-Constraint relation, support for modelling material flows, added powerFactor attribute for electricity related assets, DataSourceList)
+
 ### Version 22.7.0
 - Add support for ESDL release 22.07 (with ConnectableAsset, ExposedPortsAsset, PumpedHydroPower and CAES assets, restructured some LabelJump information, asset Constraints)
 
