@@ -11,11 +11,12 @@
 #      TNO         - Initial implementation
 #  Manager:
 #      TNO
+from typing import Dict, Any
 
 from pyecore.resources import ResourceSet, URI
 from pyecore.ecore import EEnum, EAttribute, EOrderedSet, EObject
 from pyecore.utils import alias
-from pyecore.resources.resource import HttpURI
+from pyecore.resources.resource import HttpURI, Resource
 from esdl.resources.xmlresource import XMLResource
 from esdl import esdl
 from uuid import uuid4
@@ -52,13 +53,14 @@ class EnergySystemHandler:
         esdl.EnergySystem.__repr__ = lambda x: '{}({})'.format(type(x).__name__, EnergySystemHandler.attr_to_dict(x))
 
     def _new_resource_set(self):
-        """Resets the resourceset (e.g. when loading a new file)"""
+        """Resets the resourceset and removes all files that are loaded before (e.g. when loading a new file)"""
         self.rset = ResourceSet()
         self.resource = None
         # Assign files with the .esdl extension to the XMLResource instead of default XMI
         self.rset.resource_factory['esdl'] = lambda uri: XMLResource(uri)
 
     def load_file(self, uri_or_filename: str) -> esdl.EnergySystem:
+        """Loads a file in a new resource set"""
         if uri_or_filename[:4] == 'http':
             uri = HttpURI(uri_or_filename)
         else:
@@ -89,7 +91,10 @@ class EnergySystemHandler:
         return self.energy_system
 
     def to_string(self) -> str:
-        # to use strings as resources, we simulate a string as being a URI
+        """
+        To serialize an energy system in a resource, we use a StringURI to save it to a string instead of a file
+        :return: XML string of the current resource/ESDL file that is loaded.
+        """
         uri = StringURI('to_string.esdl')
         self.resource.save(uri)
         # return the string
@@ -100,6 +105,25 @@ class EnergySystemHandler:
         uri = StringURI('to_string.esdl')
         self.resource.save(uri)
         return uri.get_stream()
+
+    def get_external_reference(self, url: str, object_id: str = None):
+        """
+        Support function to create a reference to an external ESDL/EDD file.
+
+        :param url: web address e.g. a URL from the EDR, https://drive.esdl.hesi.energy/store/resource/edr/Public/Key figures/Emissiefactoren energiedragers 2017.edd
+        :param object_id: Optional, the id of the object in the file to refer to, if not specified, it will return the root of the file.
+        :return: EObject returning the root of the document, or the object that is specified by the id found in that file
+
+        Be aware that when assigning an external reference to a containment relation, the content from the external reference
+        will be moved (not copied) to the resource that it is assigned to. If you want the reference to be external,
+        only use this for references (no diamond), not containment relations (a diamond in the ESDL UML diagram)
+        """
+        remote_resource = self.rset.get_resource(url)
+        if object_id is not None and object_id in remote_resource.uuid_dict:
+            return remote_resource.uuid_dict[object_id]
+        else:
+            return remote_resource.contents[0]
+
 
     def save(self, filename=None):
         """Add the resource to the resourceSet when saving"""
@@ -155,9 +179,26 @@ class EnergySystemHandler:
                 all_instances.append(esdl_element)
         return all_instances
 
-    # Creates a dict of all the attributes of an ESDL object, useful for printing/debugging
     @staticmethod
-    def attr_to_dict(esdl_object):
+    def instantiate_esdltype(className: str) -> EObject:
+        """
+        Instantiates a new instance of an ESDL class className and returns it.
+        E.g. ip:InPort = instantiate_class("InPort")
+        """
+        return esdl.getEClassifier(className)()
+
+    @staticmethod
+    def resolve_fragment(resource: Resource, fragment: str):
+        """
+        Resolves a URI fragment (e.g. '//@instance.0/@area/@asset.0/@port.0') to the associated object
+        and returns the object.
+        This is used for objects that have no ID attribute
+        """
+        return resource.resolve(fragment)
+
+    @staticmethod
+    def attr_to_dict(esdl_object) -> Dict[str, Any]:
+        """ Creates a dict of all the attributes of an ESDL object, useful for printing/debugging"""
         d = dict()
         d['esdlType'] = esdl_object.eClass.name
         for attr in dir(esdl_object):
@@ -167,11 +208,19 @@ class EnergySystemHandler:
         return d
 
     @staticmethod
-    def generate_uuid():
+    def generate_uuid() -> str:
         ''' Creates a uuid: useful for generating unique IDs'''
         return str(uuid4())
 
-    def create_empty_energy_system(self, name, es_description, inst_title, area_title) -> esdl.EnergySystem:
+    def create_empty_energy_system(self, name, es_description=None, inst_title="Instance0", area_title="Main Area") -> esdl.EnergySystem:
+        """
+        Creates a new empty Energy System (EnergySystem + Instance + Area) and adds it to the resource set
+        :param name:
+        :param es_description: Optional
+        :param inst_title: optional, default "Instance0"
+        :param area_title:
+        :return: the created empty Energy System
+        """
         es_id = self.generate_uuid()
         self.energy_system = esdl.EnergySystem(id=es_id, name=name, description=es_description)
 
@@ -182,7 +231,7 @@ class EnergySystemHandler:
         area = esdl.Area(id=self.generate_uuid(), name=area_title, scope=esdl.AreaScopeEnum.from_string('UNDEFINED'))
         instance.area = area
 
-        self.resource = self.rset.create_resource(StringURI('string_resource.esdl'))
+        self.resource = self.rset.create_resource(StringURI('new_energy_system.esdl'))
         # add the current energy system
         self.resource.append(self.energy_system)
         return self.energy_system
@@ -213,13 +262,27 @@ __version__ = get_versions()['version']
 del get_versions
 
 
+"""
+Allows to convert a model to an XML string and vice versa
+"""
 class StringURI(URI):
     def __init__(self, uri, text=None):
+        """
+        Creates a new StringURI to be used for a resource. By setting text it can convert that XML text to a
+        python class model, when doing a resource.load(uri). If text is empty and the associated resource is not,
+        resource.save(uri) will convert the resource to XML. Use uri.getvalue() to return the string representation of
+        this resource.
+        :param uri: the file name of this ESDL, should be unique in this resource set.
+        :param text: XML string to convert to a resource (pyEcore classes)
+        """
         super(StringURI, self).__init__(uri)
         if text is not None:
             self.__stream = BytesIO(text.encode('UTF-8'))
 
     def getvalue(self):
+        """
+        :return: the XML as a string of this ESDL resource
+        """
         readbytes = self.__stream.getvalue()
         # somehow stringIO does not work, so we use BytesIO
         string = readbytes.decode('UTF-8')

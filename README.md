@@ -67,6 +67,14 @@ print(xml_string)
 ```
 
 ## Changes
+### Version 22.11
+- Add support for Energy Data Repository files (*.edd)
+- Add supoprt for linking to external files (e.g. stored in the EDR) using `get_external_reference(url, object_id)`
+- Add function to instantiate a class by its class name (`instantiate_esdltype(className)`) 
+
+### Version 22.10
+- Update to ESDL v2210
+
 ### Version 21.9.0
 - Fix pyecore 0.12.1 dependency issue
 
