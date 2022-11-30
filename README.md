@@ -67,13 +67,29 @@ print(xml_string)
 ```
 
 ## Changes
+
 ### Version 22.11
 - Add support for Energy Data Repository files (*.edd)
 - Add supoprt for linking to external files (e.g. stored in the EDR) using `get_external_reference(url, object_id)`
 - Add function to instantiate a class by its class name (`instantiate_esdltype(className)`) 
 
-### Version 22.10
-- Update to ESDL v2210
+### Version 22.10.0
+- Add support for ESDL release 22.10 (with Port-Constraint relation, support for modelling material flows, added powerFactor attribute for electricity related assets, DataSourceList)
+
+### Version 22.7.0
+- Add support for ESDL release 22.07 (with ConnectableAsset, ExposedPortsAsset, PumpedHydroPower and CAES assets, restructured some LabelJump information, asset Constraints)
+
+### Version 21.12.0
+- Add support for ESDL release 21.12 (with quantity and unit information for InputOutputRelation, renaming of some distribution information classes of AggregatedBuildings)
+
+### Version 21.11.0
+- Add support for ESDL release 21.11 (with HybridHeatpump, developmentCosts, Commodity emission attribute)
+
+ ### Version 21.10.0
+- Add support for ESDL release 21.10 (with storage volumes)
+
+### Version 21.9.1
+- Add support for ESDL release 21.9 (with pipe and cable relations)
 
 ### Version 21.9.0
 - Fix pyecore 0.12.1 dependency issue
