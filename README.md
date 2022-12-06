@@ -68,6 +68,9 @@ print(xml_string)
 
 ## Changes
 
+### Version 22.11.1
+- Add support for ESDL release 22.11 (with KPI-KPI and Sector-Sector relation, ElectricBoiler, PowerPlant types, ...)
+
 ### Version 22.11
 - Add support for Energy Data Repository files (*.edd)
 - Add supoprt for linking to external files (e.g. stored in the EDR) using `get_external_reference(url, object_id)`
