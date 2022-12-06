@@ -86,38 +86,38 @@ class TestPyESDL(unittest.TestCase):
         xml_string = esh.to_string()
         print(xml_string)
 
-    def test_external_reference(self):
-        import edd # make sure edd model is loaded.
-        """Load a remote carrier from the EDR and add it to our energy system"""
-        esh = EnergySystemHandler()
-        es = esh.create_empty_energy_system(name="External reference Carrier test")
-        es.energySystemInformation = esdl.EnergySystemInformation()
-        es.energySystemInformation.carriers = esdl.Carriers()
-        gasoline_carrier: EObject = esh.get_external_reference("https://drive.esdl.hesi.energy/store/edr/Public/Key%20figures/Emissiefactoren%20energiedragers%202017.edd",
-                                                      object_id='c871e7db-f55c-4cee-9a22-12bebb523a54')
-        gc_resource:XMLResource = gasoline_carrier.eResource
-        print('# external defined carriers', len(gc_resource.contents[0].esdl.carrier))
-        print('Uri', gasoline_carrier.eResource.uri.plain)
-        print('Gasoline carrier', gasoline_carrier)
-        # When adding an external specified carrier to a containment relation (such as Carriers),
-        # the reference is copied into the file and removed
-        # from the external reference. That's why the #carriers count is reduced by 1 after adding.
-        # If you don't want it to be removed, deepcopy the returned value using eobject.deepcopy()
-        es.energySystemInformation.carriers.carrier.append(gasoline_carrier)
-        print(esh.to_string())
-        print('Uri after', gasoline_carrier.eResource.uri.plain)
-        print('# external defined carriers after adding it to a containment relation', len(gc_resource.contents[0].esdl.carrier))
-        print('RSet: ', esh.rset.resources)
-
-        p = esdl.PowerPlant(name="PowerPlant")
-        es.instance[0].area.asset.append(p)
-        pp_ip = esdl.InPort(name="InPort")
-        p.port.append(pp_ip)
-        lng = esh.get_external_reference("https://drive.esdl.hesi.energy/store/edr/Public/Key%20figures/Emissiefactoren%20energiedragers%202017.edd",
-                                                      object_id='72a373a8-c174-463c-ab39-fb33f612c066')
-        # When adding an external specified carrier to a reference, it will create a href link
-        pp_ip.carrier = lng
-        print(esh.to_string())
+    # def test_external_reference(self):
+    #     import edd # make sure edd model is loaded.
+    #     """Load a remote carrier from the EDR and add it to our energy system"""
+    #     esh = EnergySystemHandler()
+    #     es = esh.create_empty_energy_system(name="External reference Carrier test")
+    #     es.energySystemInformation = esdl.EnergySystemInformation()
+    #     es.energySystemInformation.carriers = esdl.Carriers()
+    #     gasoline_carrier: EObject = esh.get_external_reference("https://drive.esdl.hesi.energy/store/edr/Public/Key%20figures/Emissiefactoren%20energiedragers%202017.edd",
+    #                                                   object_id='c871e7db-f55c-4cee-9a22-12bebb523a54')
+    #     gc_resource:XMLResource = gasoline_carrier.eResource
+    #     print('# external defined carriers', len(gc_resource.contents[0].esdl.carrier))
+    #     print('Uri', gasoline_carrier.eResource.uri.plain)
+    #     print('Gasoline carrier', gasoline_carrier)
+    #     # When adding an external specified carrier to a containment relation (such as Carriers),
+    #     # the reference is copied into the file and removed
+    #     # from the external reference. That's why the #carriers count is reduced by 1 after adding.
+    #     # If you don't want it to be removed, deepcopy the returned value using eobject.deepcopy()
+    #     es.energySystemInformation.carriers.carrier.append(gasoline_carrier)
+    #     print(esh.to_string())
+    #     print('Uri after', gasoline_carrier.eResource.uri.plain)
+    #     print('# external defined carriers after adding it to a containment relation', len(gc_resource.contents[0].esdl.carrier))
+    #     print('RSet: ', esh.rset.resources)
+    #
+    #     p = esdl.PowerPlant(name="PowerPlant")
+    #     es.instance[0].area.asset.append(p)
+    #     pp_ip = esdl.InPort(name="InPort")
+    #     p.port.append(pp_ip)
+    #     lng = esh.get_external_reference("https://drive.esdl.hesi.energy/store/edr/Public/Key%20figures/Emissiefactoren%20energiedragers%202017.edd",
+    #                                                   object_id='72a373a8-c174-463c-ab39-fb33f612c066')
+    #     # When adding an external specified carrier to a reference, it will create a href link
+    #     pp_ip.carrier = lng
+    #     print(esh.to_string())
 
 
 
