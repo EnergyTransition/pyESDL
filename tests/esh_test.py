@@ -13,6 +13,7 @@
 #      TNO
 import copy
 import unittest
+import uuid
 
 from pyecore.ecore import EObject
 
@@ -127,8 +128,8 @@ class TestPyESDL(unittest.TestCase):
         gen_cons = esh.get_by_id('87d5b022-e509-4620-9d99-5f67eaf91848')
         cons_copy = gen_cons.deepcopy()
         es2 = esh.create_empty_energy_system(name="target ES")
-        es2.energySystemInformation = EnergySystemInformation()
-        es2.energySystemInformation.carriers = Carriers()
+        es2.energySystemInformation = EnergySystemInformation(id=str(uuid.uuid4()))
+        es2.energySystemInformation.carriers = Carriers(id=str(uuid.uuid4()))
         es2.energySystemInformation.carriers.carrier.append(es.energySystemInformation.carriers.carrier[0].deepcopy())
         print(es2.energySystemInformation.carriers.carrier)
         esh.update_uuid_dict(es2)
@@ -140,6 +141,16 @@ class TestPyESDL(unittest.TestCase):
 
         print("copy.deepcopy()")
         copy2 = copy.deepcopy(gen_cons)
+
+        print("IDs in the two energysystems:")
+        print("---------------")
+        for item in es.eAllContents():
+            if hasattr(item, 'id'):
+                print(item.eClass.__name__, item.id)
+        print("---------------")
+        for item in es2.eAllContents():
+            if hasattr(item, 'id'):
+                print(item.eClass.__name__, item.id)
 
 
 
