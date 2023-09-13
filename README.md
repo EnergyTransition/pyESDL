@@ -66,6 +66,17 @@ xml_string = esh.to_string()
 print(xml_string)
 ```
 
+### Converting ESDL units
+Example:
+```python
+from esdl.units.conversion import convert_to_unit, ENERGY_IN_J, ENERGY_IN_MWh
+
+converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
+18E9 == converted
+>> True
+
+```
+
 ## Changes
 
 ### Version 22.11.1
