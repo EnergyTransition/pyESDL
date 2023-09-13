@@ -24,7 +24,6 @@ from io import BytesIO
 from esdl import support_functions
 
 
-
 class EnergySystemHandler:
 
     def __init__(self, energy_system=None):
@@ -174,8 +173,6 @@ class EnergySystemHandler:
         for o in es.eAllContents():
             if hasattr(o, 'id'):
                 es.eResource.uuid_dict[o.id] = o
-
-
 
     def add_object(self, obj):
         if hasattr(obj, 'id'):
