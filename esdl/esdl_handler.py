@@ -24,7 +24,6 @@ from io import BytesIO
 from esdl import support_functions
 
 
-
 class EnergySystemHandler:
 
     def __init__(self, energy_system=None):
@@ -124,7 +123,6 @@ class EnergySystemHandler:
         else:
             return remote_resource.contents[0]
 
-
     def save(self, filename=None):
         """Add the resource to the resourceSet when saving"""
         if filename is None:
@@ -156,6 +154,25 @@ class EnergySystemHandler:
             print('Can\'t find object for id={} in uuid_dict of the ESDL model'.format(object_id))
             raise KeyError('Can\'t find object for id={} in uuid_dict of the ESDL model'.format(object_id))
             return None
+
+    def get_by_id_slow(self, object_id) -> EObject:
+        for o in self.energy_system.eAllContents():
+            if hasattr(o, 'id'):
+                if o.id == object_id:
+                    return o
+
+    def update_uuid_dict(self, es: esdl.EnergySystem = None) -> None:
+        """
+        Update the Resource's uuid_dict of a specific energy system
+        This might be necessary when e.g. deepcopying an object in an resource that has references to other parts of that
+        resource that are not being deepcopied.
+        :param es: energy system that needs a uuid_dict update, if None, the current self.energy_system is used
+        """
+        if not es:
+            es = self.energy_system
+        for o in es.eAllContents():
+            if hasattr(o, 'id'):
+                es.eResource.uuid_dict[o.id] = o
 
     def add_object(self, obj):
         if hasattr(obj, 'id'):
