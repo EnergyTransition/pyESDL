@@ -141,15 +141,15 @@ def deepcopy(self, memo=None, target_es=None):
                                             r = target_es.eResource
                                             ref_id = orig_value.id
                                             copy_value = r.uuid_dict[ref_id]
-                                            logger.info(
-                                                f'Using reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using {copy_value}')
+                                            logger.debug(
+                                                f'Using reference of type {orig_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using {copy_value}')
                                         else:
                                             logger.warning(
-                                                f'Referenced object has no ID, Can\'t find reference for {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo or target_es, using original {orig_value}')
+                                                f'Referenced object has no ID, Can\'t find reference for {orig_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo or target_es, using original {orig_value}')
                                             copy_value = orig_value
                                     else:
                                         logger.warning(
-                                            f'Can\'t find reference for {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
+                                            f'Can\'t find reference for {orig_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
                                         copy_value = orig_value
                                 except Exception as e:
                                     logger.warning(f'{e}: Cannot find reference of type {orig_value.eClass.name} of reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')

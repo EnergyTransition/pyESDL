@@ -1,3 +1,17 @@
+#  This work is based on original code developed and copyrighted by TNO 2023.
+#  Subsequent contributions are licensed to you by the developers of such code and are
+#  made available to the Project under one or several contributor license agreements.
+#
+#  This work is licensed to you under the Apache License, Version 2.0.
+#  You may obtain a copy of the license at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Contributors:
+#      TNO         - Initial implementation
+#  Manager:
+#      TNO
+
 from typing import Union, Type
 
 from pyecore.ecore import EObject, EClass, MetaEClass
@@ -9,8 +23,8 @@ __esdl_ecore_documentation = None
 
 
 """
-Convert between esdl units multipliers , e.g. MW to kW or EUR/kW to MEUR/GW 
-including some convertable units, e.g. Joule to Wh and Kelvin to Celcius)
+Convert between ESDL quantities and units, e.g. MW to kW or EUR/kW to MEUR/GW 
+including some convertable units, e.g. Joule to Wh and Kelvin to Celsius)
 """
 
 POWER_IN_MW = esdl.QuantityAndUnitType(description="Power in MW", id="POWER_in_MW",
@@ -107,7 +121,7 @@ def equals(base_unit: esdl.QuantityAndUnitType, other: esdl.QuantityAndUnitType)
 
 
 def convertable(source: esdl.UnitEnum, target: esdl.UnitEnum) -> bool:
-    """Checks if a unit can be converted to another unit, e.g. Joule -> Wh or Kelvin -> Celcius"""
+    """Checks if a unit can be converted to another unit, e.g. Joule -> Wh or Kelvin -> Celsius"""
     try:
         convert_unit(0, source, target)  # check if convert_unit does not raise an exception
         return True
