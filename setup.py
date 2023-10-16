@@ -35,7 +35,7 @@ setuptools.setup(
     install_requires=[
         'pyecore==0.12.1'
     ],
-    extra_require={
+    extras_require={
         "profiles": ["influxdb==5.3.1", "openpyxl==3.1.2"],
         "geometry": ["shapely==2.0.1", "geojson==3.0.1", "pyproj==3.6.1"]
     },
