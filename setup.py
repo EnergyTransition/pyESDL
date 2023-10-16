@@ -1,4 +1,5 @@
 # from distutils.core import setup
+import itertools
 import sys
 import unittest
 
@@ -16,6 +17,12 @@ def my_test_suite():
     test_suite = test_loader.discover('tests', pattern='*_test.py')
     return test_suite
 
+
+extras_require = {
+    "profiles": ["influxdb==5.3.1", "openpyxl==3.1.2"],
+    "geometry": ["shapely==2.0.1", "geojson==3.0.1", "pyproj==3.6.1"],
+}
+extras_require['all'] = list(itertools.chain.from_iterable(extras_require.values()))
 
 setuptools.setup(
     name='pyESDL',
@@ -35,9 +42,6 @@ setuptools.setup(
     install_requires=[
         'pyecore==0.12.1'
     ],
-    extras_require={
-        "profiles": ["influxdb==5.3.1", "openpyxl==3.1.2"],
-        "geometry": ["shapely==2.0.1", "geojson==3.0.1", "pyproj==3.6.1"]
-    },
+    extras_require=extras_require,
     test_suite='setup.my_test_suite'
 )
