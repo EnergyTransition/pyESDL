@@ -15,6 +15,8 @@
 """
 Support functions for managing EObjects
 """
+from importlib.resources import Resource
+
 from pyecore.ecore import EAttribute, EObject, EClass, EReference, EStructuralFeature
 from pyecore.valuecontainer import ECollection
 import logging
@@ -46,7 +48,7 @@ def clone(self):
     return newone
 
 
-def deepcopy(self, memo=None):
+def deepcopy(self, memo=None, target_es=None):
     """
     Deep copying an EObject.
     Does not work yet for copying references from other resources than this one.
@@ -74,10 +76,10 @@ def deepcopy(self, memo=None):
                     #clone all containment elements
                     eAbstractSet = copy.eGet(ref.name)
                     for ref_value in value:
-                        duplicate = ref_value.__deepcopy__(memo)
+                        duplicate = ref_value.__deepcopy__(memo, target_es)
                         eAbstractSet.append(duplicate)
                 else:
-                    copy.eSet(ref.name, value.__deepcopy__(memo))
+                    copy.eSet(ref.name, value.__deepcopy__(memo, target_es))
             #else:
             #    # no containment relation, but a reference
             #    # this can only be done after a full copy
@@ -105,17 +107,52 @@ def deepcopy(self, memo=None):
                         if x.many:
                             eAbstractSet = v.eGet(ref.name)
                             for orig_ref_value in orig_value:
+                                copy_ref_value = None
                                 try:
                                     copy_ref_value = memo[orig_ref_value]
                                 except KeyError:
-                                    logger.warning(f'Cannot find reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
-                                    copy_ref_value = orig_ref_value
+                                    try:
+                                        if target_es:
+                                            if hasattr(orig_ref_value, 'id'): # use id to find object in target_es
+                                                r = target_es.eResource
+                                                ref_id = orig_ref_value.id
+                                                copy_ref_value = r.uuid_dict[ref_id]
+                                                logger.warning(
+                                                    f'Using reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using {copy_ref_value}')
+                                            else:
+                                                logger.warning(
+                                                    f'No id found, Cannot find reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
+                                                copy_ref_value = orig_ref_value
+                                        else:
+                                            logger.warning(
+                                                f'Cannot find reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
+                                            copy_ref_value = orig_ref_value
+                                    except Exception:
+                                        logger.warning(f'Cannot find reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
+                                        copy_ref_value = orig_ref_value
                                 eAbstractSet.append(copy_ref_value)
                         else:
                             try:
                                 copy_value = memo[orig_value]
                             except KeyError:
-                                logger.warning(f'Cannot find reference of type {orig_value.eClass.name} of reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
-                                copy_value = orig_value
+                                try:
+                                    if target_es:
+                                        if hasattr(orig_value, 'id'):  # use id to find object in target_es
+                                            r = target_es.eResource
+                                            ref_id = orig_value.id
+                                            copy_value = r.uuid_dict[ref_id]
+                                            logger.debug(
+                                                f'Using reference of type {orig_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using {copy_value}')
+                                        else:
+                                            logger.warning(
+                                                f'Referenced object has no ID, Can\'t find reference for {orig_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo or target_es, using original {orig_value}')
+                                            copy_value = orig_value
+                                    else:
+                                        logger.warning(
+                                            f'Can\'t find reference for {orig_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
+                                        copy_value = orig_value
+                                except Exception as e:
+                                    logger.warning(f'{e}: Cannot find reference of type {orig_value.eClass.name} of reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
+                                    copy_value = orig_value
                             v.eSet(ref.name, copy_value)
     return copy
