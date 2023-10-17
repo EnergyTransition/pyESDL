@@ -79,6 +79,9 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 
 ## Changes
 
+### Version 23.03
+- Add support for ESDL release 23.03 (added 2 PowerPlant types, referenceYear for CostInformation, added fullLoadHours and operationalHours attributes to Consumer and Transport classes)
+
 ### Version 22.11.1
 - Add support for ESDL release 22.11 (with KPI-KPI and Sector-Sector relation, ElectricBoiler, PowerPlant types, ...)
 
