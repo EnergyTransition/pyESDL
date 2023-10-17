@@ -20,8 +20,8 @@ from pyecore.utils import alias
 
 from esdl import esdl
 from esdl.esdl_handler import StringURI
-from esdl.profiles.excelprofilemanager import ExcelProfileManager
-from esdl.profiles.influxdbprofilemanager import InfluxDBProfileManager, ConnectionSettings
+# from esdl.profiles.excelprofilemanager import ExcelProfileManager
+# from esdl.profiles.influxdbprofilemanager import InfluxDBProfileManager, ConnectionSettings
 from esdl.profiles.profilemanager import ProfileManager
 
 from pyecore.resources import ResourceSet, URI
