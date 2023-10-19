@@ -1,0 +1,25 @@
+version: "3.8"
+
+volumes:
+  influxdb_storage:
+    name: "influxdb_storage"
+    driver: local
+
+services:
+  influxdb:
+    image: influxdb:1.7
+    ports:
+      - "${INFLUXDB_PORT:-8086}:8086"
+      - "${INFLUXDB_RPC_PORT:-8088}:8088"
+    environment:
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+      - INFLUXDB_DB=pyesdl_test
+      - INFLUXDB_WRITE_USER=pyesdl
+      - INFLUXDB_WRITE_USER_PASSWORD=pyesdl
+    volumes:
+      - influxdb_storage:/var/lib/influxdb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://influxdb:8086/ping"]
+      interval: 10s
+      timeout: 5s

@@ -1,4 +1,4 @@
-#  This work is based on original code developed and copyrighted by TNO 2020.
+#  This work is based on original code developed and copyrighted by TNO 2023.
 #  Subsequent contributions are licensed to you by the developers of such code and are
 #  made available to the Project under one or several contributor license agreements.
 #
@@ -200,7 +200,7 @@ class EnergySystemHandler:
     def instantiate_esdltype(className: str) -> EObject:
         """
         Instantiates a new instance of an ESDL class className and returns it.
-        E.g. ip:InPort = instantiate_class("InPort")
+        E.g. ip:InPort = instantiate_esdltype("InPort")
         """
         return esdl.getEClassifier(className)()
 

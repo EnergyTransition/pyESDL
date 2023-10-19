@@ -13,11 +13,40 @@ More information about ESDL can be found at:
 2. [ESDL Model Reference documentation](https://energytransition.github.io/) that describes all the 
    classes and definitions in detail using a clickable UML diagram.
 
+## Support functions:
+
+PyESDL now comes with a lot of support functions for:
+
+- handling profiles:
+  - ProfileManager: reading profiles from a CSV, converting to and from esdl.DateTimeProfile or esdl.TimeSeriesProfile.
+  - ExcelProfileManager: reading from and writing profiles to Excel files
+  - InfluxDBProfileManager: reading from and writong profiles to InfluxDB (version 1.7)
+- handling geometries: conversion to and from esdl geometries, WKT, WKB, GeoJSON, ...
+- qunatity and units: unit conversion, converting a QuantityAndUnit to a string, building a QuantityAndUnit from a string
+
 ## Installing
-Use the following command to install the pyESDL python module from the PyPi registry:
+PyESDL now comes with a lot of support functions for handling profiles, geometries and qunatity and units. This requires
+additional dependencies. As not all users might need all functionalities, there are several ways to install pyESDL.
+
+Use the following command to install the pyESDL python module including all dependencies from the PyPi registry:
+
+`pip install pyESDL[all]`
+
+To install the minimal version of pyESDL:
 
 `pip install pyESDL`
 
+To install the dependencies for additional profile functionalities (only required for support for Excel and InfluxDB):
+
+`pip install pyESDL[profiles]`
+
+To install the dependencies for handling geometries:
+
+`pip install pyESDL[geometry]`
+
+## Documentation
+
+We will start soon with generating more documentation on [readthedocs](https://pyesdl.readthedocs.io/).
 
 ## Usage
 
@@ -66,7 +95,21 @@ xml_string = esh.to_string()
 print(xml_string)
 ```
 
+### Converting ESDL units
+Example:
+```python
+from esdl.units.conversion import convert_to_unit, ENERGY_IN_J, ENERGY_IN_MWh
+
+converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
+18E9 == converted
+>> True
+
+```
+
 ## Changes
+
+### Version 23.10
+- Add support functions for handling profiles, geometries and qunatity and units.
 
 ### Version 23.03
 - Add support for ESDL release 23.03 (added 2 PowerPlant types, referenceYear for CostInformation, added fullLoadHours and operationalHours attributes to Consumer and Transport classes)

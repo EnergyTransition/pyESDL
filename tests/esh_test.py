@@ -1,4 +1,4 @@
-#  This work is based on original code developed and copyrighted by TNO 2020.
+#  This work is based on original code developed and copyrighted by TNO 2023.
 #  Subsequent contributions are licensed to you by the developers of such code and are
 #  made available to the Project under one or several contributor license agreements.
 #
@@ -47,10 +47,6 @@ class TestPyESDL(unittest.TestCase):
         except FileNotFoundError as e:  # when running from command line
             esh.load_file('tests/test_attr_error.esdl')
         self.assertEqual(["Attribute 'trype' does not exists for type WindTurbine and is ignored (asset line 5)."], esh.resource.get_parse_information())
-
-
-
-
 
     def test_example1(self):
         esh = EnergySystemHandler()
@@ -120,11 +116,9 @@ class TestPyESDL(unittest.TestCase):
     #     pp_ip.carrier = lng
     #     print(esh.to_string())
 
-
-
     def test_deepcopy_with_context(self):
         esh = EnergySystemHandler()
-        es = esh.load_file('Test_ES_deepcopy.esdl')
+        es = esh.load_file('tests/Test_ES_deepcopy.esdl')
         gen_cons = esh.get_by_id('87d5b022-e509-4620-9d99-5f67eaf91848')
         cons_copy = gen_cons.deepcopy()
         es2 = esh.create_empty_energy_system(name="target ES")
@@ -151,8 +145,3 @@ class TestPyESDL(unittest.TestCase):
         for item in es2.eAllContents():
             if hasattr(item, 'id'):
                 print(item.eClass.__name__, item.id)
-
-
-
-
-
