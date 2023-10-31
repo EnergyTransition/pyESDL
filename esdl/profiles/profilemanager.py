@@ -79,6 +79,41 @@ class ProfileManager:
         self.end_datetime = None
         self.num_profile_items = 0
 
+    def _check_data_format_and_size(profile_header, profile_data_list):
+        num_columns = len(profile_header)
+        if num_columns < 2:
+            raise UnsupportedProfileInputDataException("profile_header should contain at least two items, " +
+                                                       "a datetime column and at least one value column")
+
+        for row in profile_data_list:
+            if len(row) != num_columns:
+                raise UnsupportedProfileInputDataException("one or more rows in profile_data_list don't contain the " +
+                                                           "same amount of columns as the profile_header")
+            if not isinstance(row[0], datetime):
+                raise UnsupportedProfileInputDataException("first element in one or more rows in profile_data_list " +
+                                                           "is not of type datetime")
+
+    def set_profile(self, profile_header, profile_data_list, profile_type: ProfileType):
+        """
+        Sets the profile information
+
+        :param profile_header: a list with column names, the first column is always the datetime column and also called
+        'datetime' (if you specify a different name, it's replaced by 'datetime')
+        :param profile_data_list: a list of lists with values, the first item in the list must be of type datetime
+        :param profile_type: the type of the profile
+        """
+
+        self._check_data_format_and_size(profile_header, profile_data_list)
+
+        self.profile_header = profile_header
+        self.profile_header[0] = 'datetime'
+        self.profile_data_list = profile_data_list
+        self.profile_type = profile_type
+
+        self.start_datetime = profile_data_list[0][0]
+        self.end_datetime = profile_data_list[-1][0]
+        self.num_profile_items = len(self.profile_data_list)
+
     def determine_end_datetime(self):
         """
         Tries to guess the end_datetime based on the loaded data, by adding timestep between the two last data points
@@ -280,4 +315,9 @@ class UnknownProfileNameException(Exception):
 class DuplicateValueInProfileException(Exception):
     """Thrown when input data for a profile contains duplicate datetime values, probably due to a timezone error with
     daylight saving"""
+    pass
+
+
+class UnsupportedProfileInputDataException(Exception):
+    """Thrown when input data for a profile is not recognized"""
     pass

@@ -108,6 +108,10 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 
 ## Changes
 
+### Version 23.10.1
+- Implement set_profile function
+- Corrected some bugs (datetime_utils missing, support for fields with '-')
+
 ### Version 23.10
 - Add support functions for handling profiles, geometries and qunatity and units.
 

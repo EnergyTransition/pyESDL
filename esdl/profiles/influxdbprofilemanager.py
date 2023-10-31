@@ -92,7 +92,7 @@ class InfluxDBProfileManager(ProfileManager):
             influxdb_enddate = to_datetime.strftime('%Y-%m-%dT%H:%M:%SZ')
 
             where_clause_list.append("time >= '" + influxdb_startdate + "'")
-            where_clause_list.append("time < '" + influxdb_enddate + "'")
+            where_clause_list.append("time <= '" + influxdb_enddate + "'")
 
         if filters:
             for filter in filters:
