@@ -98,7 +98,8 @@ class InfluxDBProfileManager(ProfileManager):
             for filter in filters:
                 where_clause_list.append(f"{filter['tag']}='{filter['value']}'")
 
-        query_string = f"SELECT {','.join(fields)} FROM {measurement}"
+        fields_string = ','.join(['"'+field+'"' for field in fields])
+        query_string = f"SELECT {fields_string} FROM {measurement}"
         if where_clause_list:
             query_string += " WHERE (" + " AND ".join(where_clause_list) + ")"
 

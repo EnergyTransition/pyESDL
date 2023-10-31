@@ -108,7 +108,7 @@ class ESDLUnitTest(unittest.TestCase):
 
         print("Reading InfluxDB profile from test...")
         prof3 = InfluxDBProfileManager(conn_settings)
-        prof3.load_influxdb("test", ['column2'])
+        prof3.load_influxdb("test", ['column1', 'column2'])
         ts_prof = prof3.get_esdl_timeseries_profile('column2')
         print(get_esdl_string(ts_prof))
 
