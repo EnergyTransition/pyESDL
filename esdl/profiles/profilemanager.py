@@ -98,7 +98,7 @@ class ProfileManager:
         Sets the profile information
 
         :param profile_header: a list with column names, the first column is always the datetime column and also called
-        'datetime' (if you specify a different name, it's replaced by 'datetime')
+                               'datetime' (if you specify a different name, it's replaced by 'datetime')
         :param profile_data_list: a list of lists with values, the first item in the list must be of type datetime
         :param profile_type: the type of the profile
         """

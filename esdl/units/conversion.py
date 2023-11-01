@@ -109,6 +109,7 @@ COST_IN_MEur_per_PJ = esdl.QuantityAndUnitType(description="Cost in M€/PJ", id
                                         perUnit=esdl.UnitEnum.JOULE)
 """Variable cost in MEUR/PJ [QuantityAndUnitType]"""
 
+
 def equals(base_unit: esdl.QuantityAndUnitType, other: esdl.QuantityAndUnitType) -> bool:
     """Checks if two units are equal based on physical quantity, multiplier, perMultiplier and perUnit attributes"""
     if base_unit.unit == other.unit and \
@@ -164,7 +165,9 @@ def convert_to_unit(value: float, source_unit: esdl.AbstractQuantityAndUnit, tar
 
 
 def convert_multiplier(source: esdl.QuantityAndUnitType, target: esdl.QuantityAndUnitType) -> float:
-    """Calculates the factor between the source unit and the target unit"""
+    """
+    Calculates the factor between the source unit and the target unit
+    """
     value = multipier_value(source.multiplier) / multipier_value(target.multiplier) * \
         multipier_value(target.perMultiplier) / multipier_value(source.perMultiplier)
     #print(f"{multipier_value(source.multiplier)} / {multipier_value(target.multiplier)} * {multipier_value(target.perMultiplier)} / {multipier_value(source.perMultiplier)}")
@@ -179,6 +182,7 @@ def convert_multiplier(source: esdl.QuantityAndUnitType, target: esdl.QuantityAn
 factors = [1, 1E-18, 1E-15, 1E-12, 1E-9, 1E-6, 1E-3, 1E-2, 1E-1, 1E1,
                1E2, 1E3, 1E6, 1E9, 1E12, 1E15, 1E15, 1E18, 1E21]
 
+
 def multipier_value(multiplier: esdl.MultiplierEnum):
     """Converts ESDL MultiplierEnum into a numeric value."""
     return factors[esdl.MultiplierEnum.eLiterals.index(multiplier)]
@@ -191,14 +195,12 @@ unit_mapping = {
     esdl.UnitEnum.KELVIN: {esdl.UnitEnum.DEGREES_CELSIUS: {'type': 'ADDITION', 'value': -273.15}}
 }
 
+
 def convert_unit(value: float, source_quantity_unit: esdl.UnitEnum, target_quantity_unit: esdl.UnitEnum) -> float:
     """
-    Does some basic unit conversion, only Joule <> Wh, Wh to Joule and *C to Kelvin and vice versa
-
-    Can only covert units when physical quanities are the same (e.g. Energy)
-
+    Does some basic unit conversion, only Joule to Wh, Wh to Joule and \N{DEGREE SIGN}C to Kelvin and vice versa.
+    Can only convert units when physical quantities are the same (e.g. Energy, Temperature)
     """
-
     if source_quantity_unit == target_quantity_unit:
         return value
     else:
@@ -225,7 +227,6 @@ class UnitException(Exception):
 def get_attribute_unit(esdl_class: Union[EClass, EObject, Type, str], attribute: str) -> str:
     """
     Retrieves the unit defined in the ESDL ecore schema for a specific attribute
-
 
     example: get_attribute_unit("PowerPlant", "power"), or
              get_attribute_unit(esdl.PowerPlant, "power"), or

@@ -16,7 +16,15 @@ from datetime import datetime
 from contextlib import suppress
 
 
-def parse_date(str_date):
+def parse_date(str_date: str):
+    """
+    Function to parse a date or datetime string to a datetime object. Tries many different formats to see
+    if it can make sense out of the string. Both dates and times seperated by a 'T' and a space are supported.
+    Both datetimes with and without timezone specification are supported
+
+    :param str_date: input string representing a date or a datetime
+    :return: datetime object based on the information in the input string
+    """
     try:
         return datetime.fromisoformat(str_date)
     except Exception:

@@ -40,7 +40,7 @@ class Shape:
         format and returns an instance of the right class.
 
         :param shape_input: input that represents information about the shape. Can be a list with coordinates, a
-        dictionary with "lat" and "lng" fields, an ESDL geometry object or a Shapely geometry object.
+                            dictionary with "lat" and "lng" fields, an ESDL geometry object or a Shapely geometry object.
         :return: an instance of the right Shape subclass
         """
         if isinstance(shape_input, esdl.Point) or (isinstance(shape_input, dict) and "lat" in shape_input):
@@ -248,7 +248,7 @@ class ShapePoint(Shape):
         or a Shapely Point instance
 
         :param shape_input: the input shape, can be an esdl.Point, a dictionary with "lat" and "lng" keys,
-        or a Shapely Point instance
+                            or a Shapely Point instance
         """
         if isinstance(shape_input, esdl.Point):
             self.shape = self.parse_esdl(shape_input)
@@ -308,7 +308,7 @@ class ShapeLine(Shape):
         "lng" keys, or a Shapely LineString instance
 
         :param shape_input: the input shape, can be an esdl.Line, a list of dictionaries with "lat" and
-        "lng" keys, or a Shapely LineString instance
+                            "lng" keys, or a Shapely LineString instance
         """
         if isinstance(shape_input, esdl.Line):
             self.shape = self.parse_esdl(shape_input)
@@ -378,7 +378,7 @@ class ShapePolygon(Shape):
         with "lat" and "lng" keys, or a Shapely Polygon instance
 
         :param shape_input: the input shape, can be an esdl.Polygon, a list of lists of dictionaries
-        with "lat" and "lng" keys, or a Shapely Polygon instance
+                            with "lat" and "lng" keys, or a Shapely Polygon instance
         """
         if isinstance(shape_input, esdl.Polygon):
             self.shape = self.parse_esdl(shape_input)
@@ -468,7 +468,7 @@ class ShapeMultiPolygon(Shape):
         of dictionaries with "lat" and "lng" key, or a Shapely Polygon instance
 
         :param shape_input: the input shape, can be an esdl.Polygon, a list of lists of dictionaries
-        with "lat" and "lng" key, or a Shapely Polygon instance
+                            with "lat" and "lng" key, or a Shapely Polygon instance
         """
         if isinstance(shape_input, esdl.MultiPolygon):
             self.shape = self.parse_esdl(shape_input)

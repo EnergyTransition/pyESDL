@@ -27,23 +27,32 @@ from esdl.utils.datetime_utils import parse_date
 
 @dataclass
 class ConnectionSettings:
+    """
+    The ConnectionSettings class represents all required settings that are required to connect to an
+    InfluxDB server
+    """
     host: str
+    """hostname of the InfluxDB server to connect to"""
     port: int
+    """port to connect to"""
     username: str
+    """username of the user that has permission to access the database"""
     password: str
+    """password of the user"""
     database: str
+    """database to connect to"""
     ssl: bool
+    """indicates whether or not to use SSL when connecting to the InfluxDB server"""
     verify_ssl: bool
+    """indicates wether or not to verify SSL certificates"""
 
 
 class InfluxDBProfileManager(ProfileManager):
     """
     InfluxDBProfileManager: manages profile data that can be loaded from and saved to InfluxDB (v1 only).
-
     InfluxDBProfileManager is a subclass of ProfileManager, so it also provides functionality to convert from/to
     different ESDL profiles and to load/save to CSV
     """
-
     def __init__(self, settings: ConnectionSettings, source_profile=None):
         """
         Constructor of the InfluxDBProfileManager
@@ -165,11 +174,11 @@ class InfluxDBProfileManager(ProfileManager):
 
         :param esdl_profile: esdl.InfluxDBProfile that is used as an input profile
         :param username: username to be used to connect to the InfluxDB server mentioned in the esdl.InfluxDBProfile,
-        defaults to None
+                         defaults to None
         :param password: password to be used to connect to the InfluxDB server mentioned in the esdl.InfluxDBProfile,
-        defaults to None
+                         defaults to None
         :param use_ssl: indicates if HTTPS should be used instead of HTTP to connect to the InfluxDB server, defaults
-        to False
+                        to False
         :param verify_ssl: verify SSL certificates for HTTPS requests, defaults to False
         """
         conn_settings = ConnectionSettings(
@@ -200,7 +209,7 @@ class InfluxDBProfileManager(ProfileManager):
         :param measurement: name of the InfluxDB measurement where the data must be written to
         :param field_names: list of the fields that should be written to InfluxDB
         :return: an esdl.InfluxDBProfile instance or a list of esdl.InfluxDBProfile instances in case multiple fields
-        were specified, with proper references to the data in the database
+                 were specified, with proper references to the data in the database
         """
         json_body = []
         if not measurement or measurement == "":
