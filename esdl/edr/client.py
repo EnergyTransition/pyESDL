@@ -57,9 +57,11 @@ class EDRClient:
 
     def get_objects_list(self, esdl_type):
         """
-        Retrieves a list of objects from the EDR of a given type. Each element in the list is a dictionary with id,
-        title, description and esdl_type fields. esdl_type can for example be "EnergyAsset", "Sectors", "Carriers" or
-        "InfluxDBProfile".
+        Retrieves a list of objects from the EDR of a given type. The input parameter esdl_type can for example be
+        "EnergyAsset", "Sectors", "Carriers" or "InfluxDBProfile". Each element in the returned list is of type EDRInfo
+        and has id, title, description and esdl_type fields. The ESDL type of the elements in the list can be subtypes
+        of the input esdl_type, e.g. you ask for objects of type "EnergyAsset" and get back objects of type
+        "WindTurbine".
 
         :param esdl_type: the type of the ESDL class
         :return: list of objects of the given type
