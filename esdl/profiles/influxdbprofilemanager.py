@@ -88,7 +88,7 @@ class InfluxDBProfileManager(ProfileManager):
         :param measurement: the name of the measurement to use in InfluxDB
         :param fields: a list of field names that need to be loaded from InfluxDB
         :param from_datetime: the start datetime (included in the data)
-        :param to_datetime: the end datetime (not included in the data)
+        :param to_datetime: the end datetime (included in the data)
         :param filters: a list of dictionaries with 'tag' and 'value' keys, that can be used to filter on the data
         :return: None
         """
