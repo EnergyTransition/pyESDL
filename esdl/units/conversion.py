@@ -27,11 +27,11 @@ Convert between ESDL quantities and units, e.g. MW to kW or EUR/kW to MEUR/GW
 including some convertable units, e.g. Joule to Wh and Kelvin to Celsius)
 """
 
-POWER_IN_MW = esdl.QuantityAndUnitType(description="Power in MW", id="POWER_in_MW",
+POWER_IN_TW = esdl.QuantityAndUnitType(description="Power in TW", id="POWER_in_TW",
                                        physicalQuantity=esdl.PhysicalQuantityEnum.POWER,
                                        unit=esdl.UnitEnum.WATT,
-                                       multiplier=esdl.MultiplierEnum.MEGA)
-"""Power in MW [QuantityAndUnitType]"""
+                                       multiplier=esdl.MultiplierEnum.TERA)
+"""Power in TW [QuantityAndUnitType]"""
 
 POWER_IN_GW = esdl.QuantityAndUnitType(description="Power in GW", id="POWER_in_GW",
                                        physicalQuantity=esdl.PhysicalQuantityEnum.POWER,
@@ -39,7 +39,19 @@ POWER_IN_GW = esdl.QuantityAndUnitType(description="Power in GW", id="POWER_in_G
                                        multiplier=esdl.MultiplierEnum.GIGA)
 """Power in GW [QuantityAndUnitType]"""
 
-POWER_IN_W = esdl.QuantityAndUnitType(description="Power in WATT", id="POWER_in_W",
+POWER_IN_MW = esdl.QuantityAndUnitType(description="Power in MW", id="POWER_in_MW",
+                                       physicalQuantity=esdl.PhysicalQuantityEnum.POWER,
+                                       unit=esdl.UnitEnum.WATT,
+                                       multiplier=esdl.MultiplierEnum.MEGA)
+"""Power in MW [QuantityAndUnitType]"""
+
+POWER_IN_kW = esdl.QuantityAndUnitType(description="Power in kW", id="POWER_in_kW",
+                                      physicalQuantity=esdl.PhysicalQuantityEnum.POWER,
+                                      unit=esdl.UnitEnum.WATT,
+                                      multiplier=esdl.MultiplierEnum.KILO)
+"""Power in kW [QuantityAndUnitType]"""
+
+POWER_IN_W = esdl.QuantityAndUnitType(description="Power in Watt", id="POWER_in_W",
                                       physicalQuantity=esdl.PhysicalQuantityEnum.POWER,
                                       unit=esdl.UnitEnum.WATT)
 """Power in W [QuantityAndUnitType]"""
@@ -50,17 +62,65 @@ ENERGY_IN_PJ = esdl.QuantityAndUnitType(description="Energy in PJ", id="ENERGY_i
                                         multiplier=esdl.MultiplierEnum.PETA)
 """Energy in PJ [QuantityAndUnitType]"""
 
+ENERGY_IN_TJ = esdl.QuantityAndUnitType(description="Energy in TJ", id="ENERGY_in_TJ",
+                                        physicalQuantity=esdl.PhysicalQuantityEnum.ENERGY,
+                                        unit=esdl.UnitEnum.JOULE,
+                                        multiplier=esdl.MultiplierEnum.TERA)
+"""Energy in TJ [QuantityAndUnitType]"""
+
+ENERGY_IN_GJ = esdl.QuantityAndUnitType(description="Energy in GJ", id="ENERGY_in_GJ",
+                                        physicalQuantity=esdl.PhysicalQuantityEnum.ENERGY,
+                                        unit=esdl.UnitEnum.JOULE,
+                                        multiplier=esdl.MultiplierEnum.GIGA)
+"""Energy in GJ [QuantityAndUnitType]"""
+
+ENERGY_IN_MJ = esdl.QuantityAndUnitType(description="Energy in MJ", id="ENERGY_in_MJ",
+                                        physicalQuantity=esdl.PhysicalQuantityEnum.ENERGY,
+                                        unit=esdl.UnitEnum.JOULE,
+                                        multiplier=esdl.MultiplierEnum.MEGA)
+"""Energy in MJ [QuantityAndUnitType]"""
+
+ENERGY_IN_kJ = esdl.QuantityAndUnitType(description="Energy in kJ", id="ENERGY_in_kJ",
+                                        physicalQuantity=esdl.PhysicalQuantityEnum.ENERGY,
+                                        unit=esdl.UnitEnum.JOULE,
+                                        multiplier=esdl.MultiplierEnum.KILO)
+"""Energy in kJ [QuantityAndUnitType]"""
+
 ENERGY_IN_J = esdl.QuantityAndUnitType(description="Energy in J", id="ENERGY_in_J",
                                         physicalQuantity=esdl.PhysicalQuantityEnum.ENERGY,
                                         unit=esdl.UnitEnum.JOULE,
                                         multiplier=esdl.MultiplierEnum.NONE)
 """Energy in J [QuantityAndUnitType]"""
 
+ENERGY_IN_TWh = esdl.QuantityAndUnitType(description="Energy in TWh", id="ENERGY_in_TWh",
+                                         physicalQuantity=esdl.PhysicalQuantityEnum.ENERGY,
+                                         unit=esdl.UnitEnum.WATTHOUR,
+                                         multiplier=esdl.MultiplierEnum.TERA)
+"""Energy in TWh [QuantityAndUnitType]"""
+
+ENERGY_IN_GWh = esdl.QuantityAndUnitType(description="Energy in GWh", id="ENERGY_in_GWh",
+                                         physicalQuantity=esdl.PhysicalQuantityEnum.ENERGY,
+                                         unit=esdl.UnitEnum.WATTHOUR,
+                                         multiplier=esdl.MultiplierEnum.GIGA)
+"""Energy in GWh [QuantityAndUnitType]"""
+
 ENERGY_IN_MWh = esdl.QuantityAndUnitType(description="Energy in MWh", id="ENERGY_in_MWh",
                                          physicalQuantity=esdl.PhysicalQuantityEnum.ENERGY,
                                          unit=esdl.UnitEnum.WATTHOUR,
                                          multiplier=esdl.MultiplierEnum.MEGA)
 """Energy in MWh [QuantityAndUnitType]"""
+
+ENERGY_IN_kWh = esdl.QuantityAndUnitType(description="Energy in kWh", id="ENERGY_in_kWh",
+                                         physicalQuantity=esdl.PhysicalQuantityEnum.ENERGY,
+                                         unit=esdl.UnitEnum.WATTHOUR,
+                                         multiplier=esdl.MultiplierEnum.KILO)
+"""Energy in kWh [QuantityAndUnitType]"""
+
+ENERGY_IN_Wh = esdl.QuantityAndUnitType(description="Energy in Wh", id="ENERGY_in_Wh",
+                                         physicalQuantity=esdl.PhysicalQuantityEnum.ENERGY,
+                                         unit=esdl.UnitEnum.WATTHOUR,
+                                         multiplier=esdl.MultiplierEnum.NONE)
+"""Energy in Wh [QuantityAndUnitType]"""
 
 COST_IN_MEur = esdl.QuantityAndUnitType(description="Cost in MEur", id="COST_in_MEUR",
                                         physicalQuantity=esdl.PhysicalQuantityEnum.COST,
@@ -82,7 +142,6 @@ COST_IN_Eur_per_GJ = esdl.QuantityAndUnitType(description="Cost in €/GJ", id="
                                         perUnit=esdl.UnitEnum.JOULE)
 """Cost in Euro per GigaJoule [QuantityAndUnitType]"""
 
-
 COST_IN_MEur_per_GW_per_year = esdl.QuantityAndUnitType(description="Cost in M€/GW/yr", id="COST_in_MEURperGWperYear",
                                         physicalQuantity=esdl.PhysicalQuantityEnum.COST,
                                         multiplier=esdl.MultiplierEnum.MEGA,
@@ -99,7 +158,6 @@ COST_IN_MEur_per_GW = esdl.QuantityAndUnitType(description="Cost in M€/GW", id
                                         perMultiplier=esdl.MultiplierEnum.GIGA,
                                         perUnit=esdl.UnitEnum.WATT)
 """Installation cost (CAPEX) in MEUR/GW [QuantityAndUnitType]"""
-
 
 COST_IN_MEur_per_PJ = esdl.QuantityAndUnitType(description="Cost in M€/PJ", id="COST_in_MEURperPJ",
                                         physicalQuantity=esdl.PhysicalQuantityEnum.COST,
