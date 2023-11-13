@@ -202,12 +202,13 @@ class InfluxDBProfileManager(ProfileManager):
 
         return prof
 
-    def save_influxdb(self, measurement: str, field_names: list):
+    def save_influxdb(self, measurement: str, field_names: list, tags: dict = None):
         """
         Saves profile information to InfluxDB
 
         :param measurement: name of the InfluxDB measurement where the data must be written to
         :param field_names: list of the fields that should be written to InfluxDB
+        :param tags: dictionary with tags and tag values, that should be used when writing this data to InfluxDB
         :return: an esdl.InfluxDBProfile instance or a list of esdl.InfluxDBProfile instances in case multiple fields
                  were specified, with proper references to the data in the database
         """
@@ -216,6 +217,8 @@ class InfluxDBProfileManager(ProfileManager):
             raise NoDataException("Measurement name is not specified, so no data can be written to InfluxDB")
         if not field_names:
             raise NoDataException("No field names are specified, so no data can be written to InfluxDB")
+        if tags and not isinstance(tags, dict):
+            raise WrongTagsFormatException("The tags parameter should be a dictionary with tag names as keys")
         for profile_row in self.profile_data_list:
             dt_string = profile_row[0].strftime('%Y-%m-%dT%H:%M:%S%z')
             fields = {}
@@ -229,11 +232,15 @@ class InfluxDBProfileManager(ProfileManager):
                     )
 
             if fields:
-                json_body.append({
+                data = {
                     "measurement": measurement,
                     "time": dt_string,
                     "fields": fields
-                })
+                }
+                if tags:
+                    data["tags"] = tags
+
+                json_body.append(data)
 
         if json_body:
             self.influxdb_client.write_points(points=json_body, database=self.database_settings.database, batch_size=100)
@@ -267,4 +274,9 @@ class NoDataException(Exception):
 
 class WrongFilterFormatException(Exception):
     """Thrown when filter specification in ESDL profile cannot be parsed"""
+    pass
+
+
+class WrongTagsFormatException(Exception):
+    """Thrown when the tags parameter has the wrong structure"""
     pass
