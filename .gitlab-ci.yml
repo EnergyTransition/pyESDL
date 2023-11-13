@@ -1,12 +1,14 @@
 deploy:
   stage: deploy
-  image: python:3.9-slim-buster
+  image: python:3.7-slim
   before_script:
-    - 'apt-get install -y curl git'
+    - 'apt-get update && apt-get install -y curl git'
     - 'python3 -m pip install --user --upgrade setuptools wheel twine versioneer future-fstrings'
   script:
     - 'git describe'
     - 'echo $CI_COMMIT_TAG'
     - 'python3 setup.py test'
     - 'python3 setup.py sdist bdist_wheel'
-
+    - 'python3 -m twine upload --verbose --username $USERNAME --password $PASSWORD dist/*'
+  only:
+    - tags
