@@ -110,6 +110,7 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 ### Version 23.11
 - Implement EDR client
 - Added more predefined QaUs
+- Support for tags in InfluxDBProfileManager
 
 ### Version 23.10.1
 - Implement set_profile function
