@@ -114,18 +114,6 @@ class ProfileManager:
         self.end_datetime = profile_data_list[-1][0]
         self.num_profile_items = len(self.profile_data_list)
 
-    def determine_end_datetime(self):
-        """
-        Tries to guess the end_datetime based on the loaded data, by adding timestep between the two last data points
-        to the timestamp of the last data point. When there's only one data point, a timestep of 1 hour is assumed.
-        """
-        if self.num_profile_items > 1:
-            timestep = self.profile_data_list[-1][0] - self.profile_data_list[-2][0]
-        else:
-            timestep = timedelta(hours=1)
-
-        self.end_datetime = self.profile_data_list[-1][0] + timestep
-
     def load_csv(self, file_path, encoding: str = "utf-8-sig"):
         """
         Reads profile data out of a CSV file.
@@ -182,7 +170,7 @@ class ProfileManager:
             self.profile_data_list.append(row)
             self.num_profile_items += 1
 
-        self.determine_end_datetime()
+        self.end_datetime = self.profile_data_list[-1][0]
         csv_file.close()
 
     def parse_esdl(self, esdl_profile):
@@ -212,7 +200,7 @@ class ProfileManager:
                 self.profile_data_list.append([aware_dt, value])
                 aware_dt = aware_dt + timedelta(seconds=esdl_profile.timestep)
                 self.num_profile_items += 1
-            self.end_datetime = aware_dt
+            self.end_datetime = self.profile_data_list[-1][0]
 
         if isinstance(esdl_profile, esdl.DateTimeProfile):
             if esdl_profile.element:
@@ -228,7 +216,7 @@ class ProfileManager:
 
                     self.profile_data_list.append([aware_dt, elem.value])
                     self.num_profile_items += 1
-                self.determine_end_datetime()
+                self.end_datetime = self.profile_data_list[-1][0]
             else:
                 raise Exception("Empty DateTimeProfile")
 

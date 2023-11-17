@@ -90,7 +90,7 @@ class ExcelProfileManager(ProfileManager):
             self.profile_data_list.append([cell.value for cell in row])
             self.num_profile_items += 1
 
-        self.determine_end_datetime()
+        self.end_datetime = self.profile_data_list[-1][0]
 
     def save_excel(self, file_path, sheet_name: str = "Sheet1"):
         """

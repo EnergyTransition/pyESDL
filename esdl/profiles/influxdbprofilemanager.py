@@ -137,7 +137,7 @@ class InfluxDBProfileManager(ProfileManager):
                 self.profile_data_list.append(row)
                 self.num_profile_items += 1
 
-            self.determine_end_datetime()
+            self.end_datetime = self.profile_data_list[-1][0]
             header = ['datetime']
             header.extend(fields)
             self.profile_header = header
