@@ -107,6 +107,9 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 
 ## Changes
 
+### Version 23.11.2
+- Add support for ESDL release 23.11 (with powerCurveTable for WindTurbine)
+
 ### Version 23.11.1
 - Fix bug in determining the end_datetime of profiles
 

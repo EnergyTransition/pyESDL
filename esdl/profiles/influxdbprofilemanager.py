@@ -182,7 +182,7 @@ class InfluxDBProfileManager(ProfileManager):
         :param verify_ssl: verify SSL certificates for HTTPS requests, defaults to False
         """
         conn_settings = ConnectionSettings(
-            host=esdl_profile.host,
+            host=esdl_profile.host.replace("http://", "").replace("https://", ""),
             port=esdl_profile.port,
             database=esdl_profile.database,
             username=username,

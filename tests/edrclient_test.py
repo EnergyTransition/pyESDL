@@ -16,6 +16,7 @@ import unittest
 
 import esdl
 from esdl.edr.client import EDRClient
+from esdl.profiles.influxdbprofilemanager import InfluxDBProfileManager
 
 
 class TestEDRClient(unittest.TestCase):
@@ -60,3 +61,21 @@ class TestEDRClient(unittest.TestCase):
             wt = edr_client.get_object_esdl(wt_info.id)
 
             self.assertTrue(isinstance(wt, esdl.WindTurbine))
+
+    def test_retrieve_profile(self):
+        edr_client = EDRClient()
+        profiles_list = edr_client.get_objects_list("InfluxDBProfile")
+        self.assertTrue(len(profiles_list) > 0, "No InfluxDBProfiles found in EDR")
+
+        for profile_info in profiles_list:
+            influxdb_profile = edr_client.get_object_esdl(profile_info.id)
+            print(influxdb_profile.name)
+
+            prof_mngr = InfluxDBProfileManager.create_esdl_influxdb_profile_manager(
+                esdl_profile=influxdb_profile,
+                use_ssl=True,
+                verify_ssl=True,
+            )
+
+            for i in range(0, 10):
+                print(prof_mngr.profile_data_list[i])
