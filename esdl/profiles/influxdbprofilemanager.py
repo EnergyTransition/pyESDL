@@ -62,6 +62,9 @@ class InfluxDBProfileManager(ProfileManager):
         """
         super().__init__()
 
+        # Temporary fix, for ESDL profiles that have HTTP(S) in the hostname
+        settings.host = settings.host.replace("http://", "").replace("https://", "")
+
         self.database_settings = settings
         self.influxdb_client = InfluxDBClient(
             host=settings.host,
@@ -73,7 +76,7 @@ class InfluxDBProfileManager(ProfileManager):
             verify_ssl=settings.verify_ssl
         )
 
-        if settings.database not in self.influxdb_client.get_list_database():
+        if settings.database not in [db['name'] for db in self.influxdb_client.get_list_database()]:
             self.influxdb_client.create_database(settings.database)
 
         if source_profile:
@@ -108,7 +111,7 @@ class InfluxDBProfileManager(ProfileManager):
                 where_clause_list.append(f"{filter['tag']}='{filter['value']}'")
 
         fields_string = ','.join(['"'+field+'"' for field in fields])
-        query_string = f"SELECT {fields_string} FROM {measurement}"
+        query_string = f"SELECT {fields_string} FROM \"{measurement}\""
         if where_clause_list:
             query_string += " WHERE (" + " AND ".join(where_clause_list) + ")"
 
@@ -144,7 +147,7 @@ class InfluxDBProfileManager(ProfileManager):
 
     @staticmethod
     def _parse_esdl_profile_filters(esdl_filters):
-        if esdl_filters is None:
+        if esdl_filters is None or esdl_filters == "":
             return []
 
         filter_str_list = esdl_filters.split(" AND ")
@@ -182,7 +185,7 @@ class InfluxDBProfileManager(ProfileManager):
         :param verify_ssl: verify SSL certificates for HTTPS requests, defaults to False
         """
         conn_settings = ConnectionSettings(
-            host=esdl_profile.host.replace("http://", "").replace("https://", ""),
+            host=esdl_profile.host,
             port=esdl_profile.port,
             database=esdl_profile.database,
             username=username,
