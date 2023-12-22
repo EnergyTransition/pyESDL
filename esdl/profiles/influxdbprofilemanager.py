@@ -96,7 +96,6 @@ class InfluxDBProfileManager(ProfileManager):
         :return: None
         """
         self.clear_profile()
-        self.profile_type = ProfileType.DATETIME_LIST
 
         where_clause_list = list()
         if from_datetime and to_datetime:
@@ -117,9 +116,6 @@ class InfluxDBProfileManager(ProfileManager):
 
         res = self.influxdb_client.query(query_string)
         res_list = res.get_points()
-
-        self.profile_header = ['datetime']
-        self.profile_header.extend(fields)
 
         if res_list:
             for elem in res_list:
@@ -144,6 +140,14 @@ class InfluxDBProfileManager(ProfileManager):
             header = ['datetime']
             header.extend(fields)
             self.profile_header = header
+            self.profile_type = ProfileType.DATETIME_LIST
+
+            tags = None
+            if filters:
+                tags = dict()
+                for filter in filters:
+                    tags[filter['tag']] = filter['value']
+            return self.get_esdl_influxdb_profile(measurement, fields, tags)
 
     @staticmethod
     def _parse_esdl_profile_filters(esdl_filters):
@@ -205,6 +209,46 @@ class InfluxDBProfileManager(ProfileManager):
 
         return prof
 
+    @staticmethod
+    def _create_esdl_filters_from_tags_dict(tags: dict = None):
+        filter_list = list()
+
+        for k, v in tags.items():
+            filter_list.append(f"{k}='{v}'")
+
+        return " AND ".join(filter_list)
+
+    def get_esdl_influxdb_profile(self, measurement: str, field_names: list, tags: dict = None):
+        """
+        Creates an esdl.InfluxDBProfile instance (or a list of instances) that refers to the data in the database.
+        Is called by load_influxdb and save_influxdb
+
+        :param measurement: name of the InfluxDB measurement where the data must be written to
+        :param field_names: list of the fields that should be written to InfluxDB
+        :param tags: dictionary with tags and tag values, that should be used when writing this data to InfluxDB
+        :return: an esdl.InfluxDBProfile instance or a list of esdl.InfluxDBProfile instances in case multiple fields
+                 were specified, with proper references to the data in the database
+        """
+        profile_list = list()
+        for field in field_names:
+            esdl_profile = esdl.InfluxDBProfile(
+                id=str(uuid4()),
+                host=self.database_settings.host,
+                port=self.database_settings.port,
+                database=self.database_settings.database,
+                measurement=measurement,
+                field=field,
+                filters=InfluxDBProfileManager._create_esdl_filters_from_tags_dict(tags),
+                startDate=EDate.from_string(self.start_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
+                endDate=EDate.from_string(self.end_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
+            )
+            profile_list.append(esdl_profile)
+
+        if len(profile_list) == 1:
+            return profile_list[0]
+        else:
+            return profile_list
+
     def save_influxdb(self, measurement: str, field_names: list, tags: dict = None):
         """
         Saves profile information to InfluxDB
@@ -247,25 +291,8 @@ class InfluxDBProfileManager(ProfileManager):
 
         if json_body:
             self.influxdb_client.write_points(points=json_body, database=self.database_settings.database, batch_size=100)
+            return self.get_esdl_influxdb_profile(measurement, field_names, tags)
 
-            profile_list = list()
-            for field in field_names:
-                esdl_profile = esdl.InfluxDBProfile(
-                    id=str(uuid4()),
-                    host=self.database_settings.host,
-                    port=self.database_settings.port,
-                    database=self.database_settings.database,
-                    measurement=measurement,
-                    field=field,
-                    startDate=EDate.from_string(self.start_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
-                    endDate=EDate.from_string(self.end_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
-                )
-                profile_list.append(esdl_profile)
-
-            if len(profile_list) == 1:
-                return profile_list[0]
-            else:
-                return profile_list
         else:
             return None
 

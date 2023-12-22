@@ -79,7 +79,7 @@ class ProfileManager:
         self.end_datetime = None
         self.num_profile_items = 0
 
-    def _check_data_format_and_size(profile_header, profile_data_list):
+    def _check_data_format_and_size(self, profile_header, profile_data_list):
         num_columns = len(profile_header)
         if num_columns < 2:
             raise UnsupportedProfileInputDataException("profile_header should contain at least two items, " +
