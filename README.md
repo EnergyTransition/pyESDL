@@ -107,6 +107,9 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 
 ## Changes
 
+### Version 24.01
+- Add support for ESDL release 24.01 
+
 ### Version 23.12.1
 - Fix bug in ProfileManager
 - InfluxDBProfileManager.load_influxdb now returns an esdl.InfluxDBProfile
