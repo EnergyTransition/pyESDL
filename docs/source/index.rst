@@ -10,6 +10,8 @@ Welcome to pyESDL's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   Introduction/index
+   Coding examples/index
    API docs/index
 
 
