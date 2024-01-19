@@ -115,9 +115,9 @@ class InfluxDBProfileManager(ProfileManager):
             query_string += " WHERE (" + " AND ".join(where_clause_list) + ")"
 
         res = self.influxdb_client.query(query_string)
-        res_list = res.get_points()
 
-        if res_list:
+        if res:
+            res_list = res.get_points()
             for elem in res_list:
                 dt = parse_date(elem['time'])
 
@@ -148,6 +148,8 @@ class InfluxDBProfileManager(ProfileManager):
                 for filter in filters:
                     tags[filter['tag']] = filter['value']
             return self.get_esdl_influxdb_profile(measurement, fields, tags)
+        else:
+            return None
 
     @staticmethod
     def _parse_esdl_profile_filters(esdl_filters):
