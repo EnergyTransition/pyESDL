@@ -7,12 +7,18 @@ Welcome to pyESDL's documentation!
 ==================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    Introduction/index
+   Technical foundation/index
+   Installation/index
+   Quickstart/index
+   pyESDL auxiliary libraries/index
    Coding examples/index
+   Tutorials/index
    API docs/index
+   Release notes/index
 
 
 Indices and tables
