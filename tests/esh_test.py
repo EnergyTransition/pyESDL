@@ -16,8 +16,10 @@ import unittest
 import uuid
 
 from pyecore.ecore import EObject
+from pyecore.resources import ResourceSet, URI
+from esdl.resources.xmi import XMIResource
 
-from esdl.esdl_handler import EnergySystemHandler
+from esdl.esdl_handler import EnergySystemHandler, StringURI
 from esdl import esdl, EnergySystemInformation, Carriers
 from pprint import pprint
 
@@ -145,3 +147,51 @@ class TestPyESDL(unittest.TestCase):
         for item in es2.eAllContents():
             if hasattr(item, 'id'):
                 print(item.eClass.__name__, item.id)
+
+    def test_deepcopy_simple(self):
+        import pyecore
+        print('PyEcore version:', pyecore.__version__)
+        esh = EnergySystemHandler()
+        es = esh.load_file('tests/Test_ES_deepcopy.esdl')
+        gen_cons = esh.get_by_id('87d5b022-e509-4620-9d99-5f67eaf91848')
+        cons_copy = gen_cons.deepcopy()
+        for item in gen_cons.eAllContents():
+            if hasattr(item, 'id'):
+                print(item.eClass.__name__, item.id)
+        print("---------------")
+        for item in cons_copy.eAllContents():
+            if hasattr(item, 'id'):
+                print(item.eClass.__name__, item.id)
+
+        rs = ResourceSet()
+        u = StringURI("string.json")
+        r = rs.create_resource(u)
+        r.append(cons_copy)
+        r.save(u)
+        import json
+        print(pprint(json.loads(u.getvalue())))
+
+    def test_deepcopy_windturbine_pyecore014_issue(self):
+        import pyecore
+        print('PyEcore version:', pyecore.__version__)
+        esh = EnergySystemHandler()
+        wt:esdl.WindTurbine = esh.load_file('tests/windturbine_pyecore014_issue_values.esdl')
+        #rset = ResourceSet()
+        #rset.resource_factory['esdl'] = lambda uri: XMIResource(uri)
+        #rset.resource_factory['xmlesdl'] = lambda uri: XMLResource(uri)
+        #resource = rset.get_resource(URI('tests/windturbine_pyecore014_issue_values.esdl'))
+        # At this point, the model instance is loaded!
+        #wt = resource.contents[0]
+        table = wt.powerCurveTable
+        print(table.row[0].value)
+        print(table.row[1].value)
+        uri = StringURI('to_string.esdl')
+        #resource = rset.create_resource(uri)
+        #resource.append(wt)
+        #resource.save(uri)
+        # return the string
+        #print( uri.getvalue())
+        string = esh.to_string()
+        print(string)
+
+
