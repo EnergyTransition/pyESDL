@@ -1,5 +1,5 @@
-Getting an ESDL object as a string
-==================================
+Getting an ESDL object as an XML string
+=======================================
 
 The following code
 

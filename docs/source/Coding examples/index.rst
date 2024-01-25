@@ -6,4 +6,4 @@ Coding examples
    :caption: Contents:
 
    handling ecore types
-   getting an ESDL object as a string
+   getting an ESDL object as an XML string
