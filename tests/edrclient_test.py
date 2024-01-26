@@ -62,6 +62,12 @@ class TestEDRClient(unittest.TestCase):
 
             self.assertTrue(isinstance(wt, esdl.WindTurbine))
 
+    def test_retrieve_one_wt(self):
+        edr_client = EDRClient()
+        wt = edr_client.get_object_esdl(
+            "/edr/Public/Assets/North Sea Energy/Wind turbines/20 MW Wind turbine at sea.edd")
+        print(wt)
+
     # def test_retrieve_profile(self):
     #     edr_client = EDRClient()
     #     profiles_list = edr_client.get_objects_list("InfluxDBProfile")
