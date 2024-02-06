@@ -12,7 +12,7 @@
 #  Manager:
 #      TNO
 
-from pyecore.resources.xmi import XMIResource, XMIOptions, XMI_URL, XSI_URL, XSI
+from esdl.resources.xmi import XMIResource, XMIOptions, XMI_URL, XSI_URL, XSI
 from lxml.etree import QName, Element, ElementTree
 import logging
 
@@ -35,7 +35,13 @@ class XMLResource(XMIResource):
     def get_parse_information(self):
         return self.parse_information
 
+
+    def load(self, options=None):
+        print("XMLResource loading...")
+        super().load(options)
+
     def save(self, output=None, options=None):
+        print("XMLResource saving...")
         self.options = options or {}
         output = self.open_out_stream(output)
         self.prefixes.clear()
