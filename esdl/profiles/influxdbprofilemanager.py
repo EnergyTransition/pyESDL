@@ -213,12 +213,15 @@ class InfluxDBProfileManager(ProfileManager):
 
     @staticmethod
     def _create_esdl_filters_from_tags_dict(tags: dict = None):
-        filter_list = list()
+        if not tags:
+            return ""
+        else:
+            filter_list = list()
 
-        for k, v in tags.items():
-            filter_list.append(f"{k}='{v}'")
+            for k, v in tags.items():
+                filter_list.append(f"{k}='{v}'")
 
-        return " AND ".join(filter_list)
+            return " AND ".join(filter_list)
 
     def get_esdl_influxdb_profile(self, measurement: str, field_names: list, tags: dict = None):
         """
