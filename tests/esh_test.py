@@ -163,13 +163,13 @@ class TestPyESDL(unittest.TestCase):
             if hasattr(item, 'id'):
                 print(item.eClass.__name__, item.id)
 
-        rs = ResourceSet()
-        u = StringURI("string.json")
-        r = rs.create_resource(u)
-        r.append(cons_copy)
-        r.save(u)
-        import json
-        print(pprint(json.loads(u.getvalue())))
+        #rs = ResourceSet()
+        #u = StringURI("string.json")
+        #r = rs.create_resource(u)
+        #r.append(cons_copy)
+        #r.save(u)
+        #import json
+        #print(pprint(json.loads(u.getvalue())))
 
     def test_deepcopy_windturbine_pyecore014_issue(self):
         import pyecore
