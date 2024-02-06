@@ -107,7 +107,12 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 
 ## Changes
 
-### Version 24.01
+## Version 24.2
+- Fix bug when no tags are given for an InfluxDBProfile
+- Fix issue with multi-valued attribute values (such as values in TableRow)
+- Start with the ReadTheDocs documentation
+
+### Version 24.1
 - Add support for ESDL release 24.01 
 
 ### Version 23.12.1
