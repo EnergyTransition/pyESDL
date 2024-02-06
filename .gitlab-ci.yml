@@ -4,6 +4,7 @@ deploy:
   before_script:
     - 'apt-get update && apt-get install -y curl git'
     - 'python3 -m pip install --user --upgrade setuptools wheel twine versioneer future-fstrings'
+    - 'python3 -m pip install --user -r requirements.txt'
   script:
     - 'git describe'
     - 'echo $CI_COMMIT_TAG'
