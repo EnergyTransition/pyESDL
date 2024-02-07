@@ -10,8 +10,6 @@ Start with importing the required libraries
     from esdl import esdl
     from esdl.edr.client import EDRClient
     from esdl.esdl_handler import EnergySystemHandler
-    import pandas as pd
-    from esdl.profiles.influxdbprofilemanager import InfluxDBProfileManager
 
 Define some constants
 
