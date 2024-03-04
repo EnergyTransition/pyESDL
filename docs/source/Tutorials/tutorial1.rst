@@ -8,7 +8,6 @@ Start with importing the required libraries
 .. code-block:: python
 
     from esdl import esdl
-    from esdl.edr.client import EDRClient
     from esdl.esdl_handler import EnergySystemHandler
 
 Define some constants
