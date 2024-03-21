@@ -1,7 +1,7 @@
 Getting an ESDL object as an XML string
 =======================================
 
-The following code
+The following code:
 
 .. code-block:: python
 
@@ -20,7 +20,7 @@ The following code
   resource.save(uri)
   print(uri.getvalue())
 
-results in
+results in:
 
 .. code-block:: XML
 
