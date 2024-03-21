@@ -1,7 +1,7 @@
 Tutorial 1: Create a simple EnergySystem
 ========================================
 
-<< Introduction text to this tutorial >>
+This is a basic tutorial on how to create an ESDL from scratch. A basic energy system is created, with an electricity demand, a gas-powered power plant, and a natural gas import.
 
 Start with importing the required libraries
 
