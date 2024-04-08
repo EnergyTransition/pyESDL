@@ -61,6 +61,7 @@ Check if the element is an EnegyAsset
             if isinstance(esdl_element, esdl.EnergyAsset):
 
 If it is, write its type (using eClass.name), ID, and name to a corresponding list
+
 .. code-block:: python
 
                 asset_types_list.append(esdl_element.eClass.name)
