@@ -37,11 +37,9 @@ class XMLResource(XMIResource):
 
 
     def load(self, options=None):
-        print("XMLResource loading...")
         super().load(options)
 
     def save(self, output=None, options=None):
-        print("XMLResource saving...")
         self.options = options or {}
         output = self.open_out_stream(output)
         self.prefixes.clear()

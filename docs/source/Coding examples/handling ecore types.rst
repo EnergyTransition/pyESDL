@@ -1,6 +1,9 @@
 Handling ECore types
 ====================
 
+This page shows some tips and tricks to convert from string values to types used in ESDL and pyEcore
+(the underlying library that implements the Eclipse ECore model that is used to define ESDL)
+
 EDate
 -----
 
