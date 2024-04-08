@@ -54,7 +54,7 @@ There are three different arrows/links used in this diagram:
 
 1. :green:`Containment relation: object is part of parent object. The diamond arrow (green)`
 
-     | The relation between ``EnergyAsset`` and ``Port`` is named ``port` and may contains 0 or more ``Ports``
+     | The relation between ``EnergyAsset`` and ``Port`` is named ``port`` and may contain 0 or more ``Ports``
 
 2. :red:`Inheritance: attributes of parent are inherited. The open arrow (red)`
 
