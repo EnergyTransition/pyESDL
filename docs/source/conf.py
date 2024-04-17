@@ -11,11 +11,15 @@ print(sys.path)
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+from esdl import _version
 
 project = 'pyESDL'
-copyright = '2023, Ewoud Werkman, Edwin Matthijssen'
-author = 'Ewoud Werkman, Edwin Matthijssen'
-release = '2023'
+copyright = 'Ewoud Werkman, Edwin Matthijssen, Selma Causevic'
+author = 'Ewoud Werkman, Edwin Matthijssen, Selma Causevic'
+#release = '2023'
+version = _version.get_versions()['version']
+if '+' in version:
+    version = version.split('+')[0]  # remove any 'dirty' state information
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

@@ -25,7 +25,14 @@ class ESDLUnitTest(unittest.TestCase):
     def test_get_version(self):
         doc = EcoreDocumentation()  # loads esdl ecore from github
         version = doc.get_esdl_version()
+        print('ESDL version', version)
         self.assertEqual(version[0], "v")
+    def test_pyESDL_version(self):
+        from esdl import _version
+        version = _version.get_versions()['version']
+        if '+' in version:
+            version = version.split('+')[0]
+        print('pyESDL version', version)
 
     def test_attribute_unit(self):
         unit = get_attribute_unit("PowerPlant", "power")
