@@ -24,6 +24,26 @@ class TestPyESDLGeometry(unittest.TestCase):
         shp = Shape.parse_wkt(wkt_str)
         print(shp.get_esdl())
 
+    def test_esdl_polygon(self):
+        # Create an esdl.Polygon with three coordinates
+        pol = esdl.Polygon()
+        subpol = esdl.SubPolygon()
+        subpol.point.extend([
+            esdl.Point(lat=51.968569708352845, lon=4.352463483810425),
+            esdl.Point(lat=51.968206158647774 , lon=4.352656602859497),
+            esdl.Point(lat=51.968371408879335, lon=4.353482723236084)
+        ])
+        pol.exterior = subpol
+
+        # Convert it to a Shapely polygon and print the WKT (contains 4 coordinates)
+        shp = Shape.create(pol)
+        print(shp.get_wkt())
+
+        # Create a esdl.Polygon out of the Shapely polygon (contains 4 coordinates)
+        esdl_pol = shp.get_esdl()
+        for p in esdl_pol.exterior.point:
+            print(p)
+
     def test_create(self):
         p = esdl.Point(lat=51.96835818888323, lon=4.352849721908569)
         shp = Shape.create(p)
