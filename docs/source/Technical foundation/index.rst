@@ -75,9 +75,9 @@ of (containment) relations (see figure above).
 - 0..*  → List of Port  (read as zero or more)
 - 0..1  → optional Carrier (read as zero or one)
 
-Furthermore, some classes are abstract (contain data, but cannot be instantiated),
+Furthermore, some classes are `abstract` (contain data, but cannot be instantiated),
 prefixed with an A in a circle and in italics. E.g. you cannot create an instance of the EnergyAsset class (nor Producer or Port) itself,
-but you should always instantiate a subclass, in this caseWindTurbine.
+but you should always instantiate a subclass, in this case ``WindTurbine``.
 
 An additional benefit of using ECore and strict typing is that all this information
 about how classes relate to other classes in ESDL is also available at runtime. This benefit
