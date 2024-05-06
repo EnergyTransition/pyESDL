@@ -106,7 +106,8 @@ class ProfileManager:
         self._check_data_format_and_size(profile_header, profile_data_list)
 
         self.profile_header = profile_header
-        self.profile_header[0] = 'datetime'
+        if self.profile_header[0] != 'datetime':
+            self.profile_header[0] = 'datetime'
         self.profile_data_list = profile_data_list
         self.profile_type = profile_type
 
