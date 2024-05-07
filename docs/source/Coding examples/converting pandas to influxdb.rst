@@ -96,7 +96,7 @@ are available to be assigned in bulk to Consumer assets in an ESDL file.
 
     def get_inport(asset: EnergyAsset):
     """
-    Find the first OutPort of an ESDL EnergyAsset.
+    Find the first InPort of an ESDL EnergyAsset.
     """
         for p in asset.port:
             if isinstance(p, esdl.InPort):
