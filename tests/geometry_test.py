@@ -20,11 +20,16 @@ from esdl.geometry.shape import Shape
 class TestPyESDLGeometry(unittest.TestCase):
 
     def test_parse_wkt_str(self):
+        print("test_parse_wkt_str")
+        print("==================")
         wkt_str = "POLYGON((4.352463483810425 51.968569708352845,4.352656602859497 51.968206158647774,4.353482723236084 51.968371408879335,4.352463483810425 51.968569708352845))"
         shp = Shape.parse_wkt(wkt_str)
+        print("ESDL:")
         print(shp.get_esdl())
 
     def test_esdl_polygon(self):
+        print("test_esdl_polygon")
+        print("=================")
         # Create an esdl.Polygon with three coordinates
         pol = esdl.Polygon()
         subpol = esdl.SubPolygon()
@@ -45,11 +50,15 @@ class TestPyESDLGeometry(unittest.TestCase):
             print(p)
 
     def test_create(self):
+        print("test_create")
+        print("===========")
         p = esdl.Point(lat=51.96835818888323, lon=4.352849721908569)
         shp = Shape.create(p)
         print(shp.get_geojson_feature(properties={"key": "value"}))
 
     def test_shapely_contains(self):
+        print("test_shapely_contains")
+        print("=====================")
         esdl_p = esdl.Point(lat=51.96835818888323, lon=4.352849721908569)
         point_shp = Shape.create(esdl_p)
         shapely_point = point_shp.get_shape()
@@ -64,6 +73,18 @@ class TestPyESDLGeometry(unittest.TestCase):
         polygon_shp = Shape.create(esdl_polygon)
         shapely_polygon = polygon_shp.get_shape()
 
-        print(shapely_polygon.contains(shapely_point))
+        print("Point must be in Polygon: ", shapely_polygon.contains(shapely_point))
+
+    def test_pyproj(self):
+        print("test_pyproj")
+        print("===========")
+
+        # lat = y and lon = x for RD coordinates
+        rdp = esdl.Point(lat=470715.91, lon=142735.75, CRS="EPSG:28992")
+
+        shape = Shape.create(rdp)
+        wkt = shape.get_wkt()
+        return (wkt == "POINT (5.207712856910414 52.22438576457774)")
+
 
 
