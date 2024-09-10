@@ -107,9 +107,6 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 
 ## Changes
 
-## Version 24.9
-- Upgrade shapely and geojson versions
-
 ## Version 24.2
 - Fix bug when no tags are given for an InfluxDBProfile
 - Fix issue with multi-valued attribute values (such as values in TableRow)
