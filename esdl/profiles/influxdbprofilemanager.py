@@ -238,6 +238,7 @@ class InfluxDBProfileManager(ProfileManager):
         for field in field_names:
             esdl_profile = esdl.InfluxDBProfile(
                 id=str(uuid4()),
+                name=field,
                 host=self.database_settings.host,
                 port=self.database_settings.port,
                 database=self.database_settings.database,

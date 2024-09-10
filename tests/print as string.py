@@ -1,3 +1,4 @@
+from pyecore.ecore import EInt
 from pyecore.resources import ResourceSet, URI
 
 from esdl import esdl
@@ -27,6 +28,3 @@ resource.append(wt)
 
 resource.save(uri)
 print(uri.getvalue())
-
-gp = esdl.GenericProducer()
-print(gp.eClass.name)
