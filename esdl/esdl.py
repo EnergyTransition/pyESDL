@@ -709,8 +709,9 @@ class CostInformation(EObject, metaclass=MetaEClass):
     variableMaintenanceCosts = EReference(
         ordered=True, unique=True, containment=True, derived=False)
     developmentCosts = EReference(ordered=True, unique=True, containment=True, derived=False)
+    decommissioningCosts = EReference(ordered=True, unique=True, containment=True, derived=False)
 
-    def __init__(self, *, investmentCosts=None, installationCosts=None, fixedOperationalAndMaintenanceCosts=None, marginalCosts=None, variableOperationalAndMaintenanceCosts=None, id=None, discountRate=None, variableOperationalCosts=None, fixedMaintenanceCosts=None, fixedOperationalCosts=None, variableMaintenanceCosts=None, developmentCosts=None, name=None, description=None, referenceYear=None):
+    def __init__(self, *, investmentCosts=None, installationCosts=None, fixedOperationalAndMaintenanceCosts=None, marginalCosts=None, variableOperationalAndMaintenanceCosts=None, id=None, discountRate=None, variableOperationalCosts=None, fixedMaintenanceCosts=None, fixedOperationalCosts=None, variableMaintenanceCosts=None, developmentCosts=None, name=None, description=None, referenceYear=None, decommissioningCosts=None):
         # if kwargs:
         #    raise AttributeError('unexpected arguments: {}'.format(kwargs))
 
@@ -760,6 +761,9 @@ class CostInformation(EObject, metaclass=MetaEClass):
 
         if developmentCosts is not None:
             self.developmentCosts = developmentCosts
+
+        if decommissioningCosts is not None:
+            self.decommissioningCosts = decommissioningCosts
 
 
 class StringItem(EObject, metaclass=MetaEClass):
@@ -2921,6 +2925,18 @@ class DataSourceList(AbstractDataSource):
             self.dataSource.extend(dataSource)
 
 
+class InstanceYear(AbstractInstanceDate):
+    """Describes the year of the validity of the data that is used in this instance """
+    year = EAttribute(eType=EInt, unique=True, derived=False, changeable=True)
+
+    def __init__(self, *, year=None, **kwargs):
+
+        super().__init__(**kwargs)
+
+        if year is not None:
+            self.year = year
+
+
 class Insulation(Asset):
     """Describes insulation that can be added to a building. The relation with the heat consumption is not defined and requires manual modelling"""
     thermalInsulation = EAttribute(eType=EDouble, unique=True, derived=False, changeable=True)
@@ -3118,11 +3134,12 @@ class ElectricityCommodity(Commodity):
 
 
 class Range(StaticProfile):
-    """Defines a range between two values"""
+    """Defines a range between two values. Optionally a mid value can be specified as for example a mean value or most plausible value."""
     minValue = EAttribute(eType=EDouble, unique=True, derived=False, changeable=True)
     maxValue = EAttribute(eType=EDouble, unique=True, derived=False, changeable=True)
+    midValue = EAttribute(eType=EDouble, unique=True, derived=False, changeable=True)
 
-    def __init__(self, *, minValue=None, maxValue=None, **kwargs):
+    def __init__(self, *, minValue=None, maxValue=None, midValue=None, **kwargs):
 
         super().__init__(**kwargs)
 
@@ -3131,6 +3148,9 @@ class Range(StaticProfile):
 
         if maxValue is not None:
             self.maxValue = maxValue
+
+        if midValue is not None:
+            self.midValue = midValue
 
 
 class SolarPotential(Potential):
