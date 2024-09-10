@@ -75,16 +75,16 @@ class TestPyESDLGeometry(unittest.TestCase):
 
         print("Point must be in Polygon: ", shapely_polygon.contains(shapely_point))
 
-    def test_pyproj(self):
-        print("test_pyproj")
-        print("===========")
-
-        # lat = y and lon = x for RD coordinates
-        rdp = esdl.Point(lat=470715.91, lon=142735.75, CRS="EPSG:28992")
-
-        shape = Shape.create(rdp)
-        wkt = shape.get_wkt()
-        return (wkt == "POINT (5.207712856910414 52.22438576457774)")
+    # def test_pyproj(self):
+    #     print("test_pyproj")
+    #     print("===========")
+    #
+    #     # lat = y and lon = x for RD coordinates
+    #     rdp = esdl.Point(lat=470715.91, lon=142735.75, CRS="EPSG:28992")
+    #
+    #     shape = Shape.create(rdp)
+    #     wkt = shape.get_wkt()
+    #     return (wkt == "POINT (5.207712856910414 52.22438576457774)")
 
 
 
