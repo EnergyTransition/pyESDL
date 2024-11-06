@@ -15,9 +15,8 @@
 """
 Support functions for managing EObjects
 """
-from importlib.resources import Resource
-
 from pyecore.ecore import EAttribute, EObject, EClass, EReference, EStructuralFeature
+from pyecore.innerutils import InternalSet
 from pyecore.valuecontainer import ECollection
 import logging
 
@@ -155,4 +154,5 @@ def deepcopy(self, memo=None, target_es=None):
                                     logger.warning(f'{e}: Cannot find reference of type {orig_value.eClass.name} of reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
                                     copy_value = orig_value
                             v.eSet(ref.name, copy_value)
+    copy._isset = InternalSet(self._isset)
     return copy
