@@ -152,7 +152,7 @@ class TestPyESDL(unittest.TestCase):
         import pyecore
         print('PyEcore version:', pyecore.__version__)
         esh = EnergySystemHandler()
-        es = esh.load_file('Test_ES_deepcopy.esdl')
+        es = esh.load_file('tests/Test_ES_deepcopy.esdl')
         gen_cons = esh.get_by_id('87d5b022-e509-4620-9d99-5f67eaf91848')
         cons_copy = gen_cons.deepcopy()
         for item in gen_cons.eAllContents():

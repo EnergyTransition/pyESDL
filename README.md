@@ -1,5 +1,8 @@
 # pyESDL
 
+![PyPI - Version](https://img.shields.io/pypi/v/pyesdl)  ![PyPI - Downloads](https://img.shields.io/pypi/dm/pyESDL)  ![ReadTheDocs status](https://readthedocs.org/projects/pyesdl/badge/?version=latest)
+
+
 pyESDL is a library for using ESDL in python programs. ESDL stands for Energy System Description
 Language and is created to support developers creating, parsing, generating ESDL-files with the 
 goal to create interoperable energy system transition tooling.

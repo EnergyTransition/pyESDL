@@ -12,10 +12,10 @@ if version < (3, 7):
     sys.exit('pyESDL requires at least Python >= 3.7')
 
 
-def my_test_suite():
-    test_loader = unittest.TestLoader()
-    test_suite = test_loader.discover('tests', pattern='*_test.py')
-    return test_suite
+# def my_test_suite():
+#     test_loader = unittest.TestLoader()
+#     test_suite = test_loader.discover('tests', pattern='*_test.py')
+#     return test_suite
 
 
 extras_require = {
@@ -40,8 +40,9 @@ setuptools.setup(
     author_email='ewoud.werkman@tno.nl',
     python_requires='>=3.7',
     install_requires=[
-        'pyecore==0.12.1'
+        'pyecore==0.13.2'
     ],
     extras_require=extras_require,
-    test_suite='setup.my_test_suite'
+    # test_suite='setup.my_test_suite',
+    tests_require = ["pytest"]
 )
