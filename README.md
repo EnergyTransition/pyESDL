@@ -110,6 +110,11 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 
 ## Changes
 
+## Version 24.11
+- Update build system and dependencies
+- Fix wrong import in `support_functions` on Python > 3.12
+- Update pyEcore to 0.15.1
+
 ## Version 24.9
 - Add support for ESDL release 24.09
 - Upgrade shapely and geojson versions
