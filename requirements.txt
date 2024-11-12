@@ -1,5 +1,5 @@
 versioneer==0.29 # for versioning everything
-pyecore==0.15.1 # for reading esdl files
+pyecore==0.13.2 # for reading esdl files
 #future-fstrings==1.2.0 # required by pyEcore
 pyecoregen==0.5.1 # for generating esdl classes
 twine>=5.1.1 # for publishing in the PyPi repo

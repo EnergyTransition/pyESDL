@@ -110,6 +110,9 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 
 ## Changes
 
+## Version 24.11.1
+- Downgrade pyEcore to 0.13.2 again, due to error with rows in tables
+
 ## Version 24.11
 - Update build system and dependencies
 - Fix wrong import in `support_functions` on Python > 3.12
