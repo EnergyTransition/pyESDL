@@ -20,7 +20,7 @@ if version < (3, 7):
 
 extras_require = {
     "profiles": ["influxdb==5.3.1", "openpyxl==3.1.2"],
-    "geometry": ["shapely==2.0.1", "geojson==3.0.1", "pyproj==3.6.1"],
+    "geometry": ["shapely==2.0.1", "geojson==3.1.0", "pyproj==3.6.1"],
 }
 extras_require['all'] = list(itertools.chain.from_iterable(extras_require.values()))
 

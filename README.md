@@ -10,6 +10,8 @@ goal to create interoperable energy system transition tooling.
 This package contains all the ESDL classes of the ESDL language and an `EnergySystemHandler`
 that helps the developer to read and write ESDL-files.
 
+The PyESDL documentation can be found here: [https://pyesdl.readthedocs.io/](https://pyesdl.readthedocs.io/)
+
 More information about ESDL can be found at:
 1. [ESDL gitbook documentation](https://energytransition.gitbook.io/esdl/) with a general introduction,
    example applications and some code samples.
@@ -109,6 +111,10 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 ```
 
 ## Changes
+
+## Version 24.11.2
+- Add link to documentation of pyESDL on readthedocs
+- Fix geojson dependency 
 
 ## Version 24.11.1
 - Downgrade pyEcore to 0.13.2 again, due to error with rows in tables
