@@ -112,6 +112,9 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 
 ## Changes
 
+## Version 25.2
+- Add support for ESDL release 25.2
+
 ## Version 24.11.2
 - Add link to documentation of pyESDL on readthedocs
 - Fix geojson dependency 
