@@ -2114,10 +2114,10 @@ class Asset(Item):
     material = EReference(ordered=True, unique=True, containment=True, derived=False)
     bufferDistance = EReference(ordered=True, unique=True,
                                 containment=True, derived=False, upper=-1)
-    w = EReference(ordered=True, unique=True, containment=True, derived=False, upper=-1)
+    constraint = EReference(ordered=True, unique=True, containment=True, derived=False, upper=-1)
     containingAsset = EReference(ordered=True, unique=True, containment=False, derived=False)
 
-    def __init__(self, *, surfaceArea=None, commissioningDate=None, decommissioningDate=None, owner=None, area=None, containingBuilding=None, geometry=None, costInformation=None, technicalLifetime=None, aggregated=None, aggregationCount=None, installationDuration=None, KPIs=None, assetType=None, state=None, material=None, manufacturer=None, bufferDistance=None, w=None, containingAsset=None, **kwargs):
+    def __init__(self, *, surfaceArea=None, commissioningDate=None, decommissioningDate=None, owner=None, area=None, containingBuilding=None, geometry=None, costInformation=None, technicalLifetime=None, aggregated=None, aggregationCount=None, installationDuration=None, KPIs=None, assetType=None, state=None, material=None, manufacturer=None, bufferDistance=None, constraint=None, containingAsset=None, **kwargs):
 
         super().__init__(**kwargs)
 
@@ -2175,8 +2175,8 @@ class Asset(Item):
         if bufferDistance:
             self.bufferDistance.extend(bufferDistance)
 
-        if w:
-            self.w.extend(w)
+        if constraint:
+            self.constraint.extend(constraint)
 
         if containingAsset is not None:
             self.containingAsset = containingAsset
