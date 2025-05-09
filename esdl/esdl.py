@@ -3087,17 +3087,17 @@ Username and password required to connect to the database are to be provided by 
 
 
 class FileConfiguration(AbstractDataConfiguration):
-    """Configures a path to a file that can be used for one or more TableBasedProfiles. Path can be a file location or an uri that defines how to find this file.
+    """Configures an uri to a file that can be used for one or more TableBasedProfiles. Path can be a file location or an uri that defines how to find this file, e.g. using https:// or s3:// to identify the protocol scheme.
 Keep in mind that for portability one should not refer to local files that others cannot access. In those cases a (public) database should be used, e.g. the EDR."""
-    path = EAttribute(eType=EString, unique=True, derived=False, changeable=True)
+    uri = EAttribute(eType=EString, unique=True, derived=False, changeable=True)
     type = EAttribute(eType=FileTypeEnum, unique=True, derived=False, changeable=True)
 
-    def __init__(self, *, path=None, type=None, **kwargs):
+    def __init__(self, *, uri=None, type=None, **kwargs):
 
         super().__init__(**kwargs)
 
-        if path is not None:
-            self.path = path
+        if uri is not None:
+            self.uri = uri
 
         if type is not None:
             self.type = type
@@ -3826,14 +3826,18 @@ The information defined in this data table should be sufficient to build a query
 
 class ProfileConstraint(Constraint):
     """Allow to specify a certain constraint as a profile (varying over time)"""
-    profile = EReference(ordered=True, unique=True, containment=True, derived=False)
+    minimum = EReference(ordered=True, unique=True, containment=True, derived=False)
+    maximum = EReference(ordered=True, unique=True, containment=True, derived=False)
 
-    def __init__(self, *, profile=None, **kwargs):
+    def __init__(self, *, minimum=None, maximum=None, **kwargs):
 
         super().__init__(**kwargs)
 
-        if profile is not None:
-            self.profile = profile
+        if minimum is not None:
+            self.minimum = minimum
+
+        if maximum is not None:
+            self.maximum = maximum
 
 
 @abstract
