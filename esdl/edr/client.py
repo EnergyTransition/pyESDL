@@ -78,8 +78,8 @@ class EDRClient:
                 obj = EDRInfo(
                     id=item["id"],
                     title=item["title"],
-                    description=item["description"],
-                    esdl_type=item["esdlType"],
+                    description=item["description"] if "description" in item else "",
+                    esdl_type=item["esdlType"] if "esdlType" in item else None,
                 )
                 obj_list.append(obj)
 
