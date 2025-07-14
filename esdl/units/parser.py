@@ -144,6 +144,7 @@ def build_qau_from_unit_string(unit_string):
         for u in unitdict:
             if unitdict[u] == unit_parts[0]:
                 qau.unit = esdl.UnitEnum.from_string(u)
+                break
 
         # if the first try failed, try to see if there is a multiplier in front of the unit
         if qau.unit == esdl.UnitEnum.NONE:
@@ -154,6 +155,8 @@ def build_qau_from_unit_string(unit_string):
                         if multiplierdict[m] == unit_parts[0][0]:
                             qau.unit = esdl.UnitEnum.from_string(u)
                             qau.multiplier = esdl.MultiplierEnum.from_string(m)
+                            break
+                    break
 
         # Zero, one or two 'perUnits' are possible
         if len(unit_parts) > 1:
@@ -162,6 +165,7 @@ def build_qau_from_unit_string(unit_string):
                 for u in unitdict:
                     if unitdict[u] == unit_parts[up]:
                         qau.perUnit = esdl.UnitEnum.from_string(u)
+                        break
 
                 # if the first try failed, try to see if there is a multiplier in front of the perUnit
                 if qau.perUnit == esdl.UnitEnum.NONE:
@@ -172,11 +176,14 @@ def build_qau_from_unit_string(unit_string):
                                 if multiplierdict[m] == unit_parts[up][0]:
                                     qau.perUnit = esdl.UnitEnum.from_string(u)
                                     qau.perMultiplier = esdl.MultiplierEnum.from_string(m)
+                                    break
+                            break
 
                 # Parse the perTimeUnit
                 for tu in timeunitdict:
                     if timeunitdict[tu] == unit_parts[up]:
                         qau.perTimeUnit = esdl.TimeUnitEnum.from_string(tu)
+                        break
 
     return qau
 

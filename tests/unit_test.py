@@ -18,6 +18,7 @@ from esdl import esdl
 from esdl.ecore_documentation import EcoreDocumentation
 from esdl.units.conversion import get_attribute_unit, convert_to_unit, POWER_IN_W, POWER_IN_GW, ENERGY_IN_J, \
     ENERGY_IN_MWh
+from esdl.units.parser import build_qau_from_unit_string
 
 
 class ESDLUnitTest(unittest.TestCase):
@@ -53,6 +54,10 @@ class ESDLUnitTest(unittest.TestCase):
 
         converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
         self.assertEqual(18E9, converted)
+
+    def test_unit_parser(self):
+        unit = build_qau_from_unit_string("TWh")
+        self.assertEqual(unit.multiplier, esdl.MultiplierEnum.TERA)
 
 
 if __name__ == '__main__':
