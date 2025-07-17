@@ -112,6 +112,11 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 
 ## Changes
 
+## Version 25.7
+- Add support for ESDL release 25.7
+- Small bugfix in generating a QuantityAndUnitType instance from a string
+- Fix bug in unit conversion when physical quantities are not the same
+
 ## Version 25.5.2
 - Fix bug in unit conversion when physical quantities are not the same
 
