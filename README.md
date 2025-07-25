@@ -109,8 +109,15 @@ converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
 18E9 == converted
 >> True
 ```
+Creating QuantityAndUnitTypes from strings is also possible using `build_qau_from_unit_string()`. 
+E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh" as unit.
 
 ## Changes
+
+## Version 25.9 (unreleased)
+- Add unit conversion from gram to tonne and vice versa (e.g. kg to Mt)
+- Support setting PhysicalQuantity when using `build_qau_from_unit_string()`, e.g.
+  `build_qau_from_unit_string("TWh", 'Energy')`
 
 ## Version 25.7
 - Add support for ESDL release 25.7

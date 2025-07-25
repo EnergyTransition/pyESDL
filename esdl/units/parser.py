@@ -13,8 +13,9 @@
 #      TNO
 
 import uuid
-from esdl import esdl
+from typing import Union
 
+from esdl import esdl, PhysicalQuantityEnum
 
 unitdict = {
     'NONE': '-',
@@ -28,6 +29,7 @@ unitdict = {
     'DEGREES_CELSIUS': '\u2103',  # Sign for degrees Celcius
     'KELVIN': 'K',
     'GRAM': 'g',
+    'TONNE': 't',
     'EURO': 'EUR',
     'DOLLAR': 'USD',
     'METRE': 'm',
@@ -127,16 +129,27 @@ def unit_to_string(qau):
     return s
 
 
-def build_qau_from_unit_string(unit_string):
+def build_qau_from_unit_string(unit_string: str, physical_quantity: Union[str, esdl.PhysicalQuantityEnum] = None):
     """
     Build an esdl.QuantityAndUnit instance from a string representing only the unit (and not the physical quantity),
     for example from "kWh/yr".
 
     :param unit_string: string representation of the QuanityAndUnit unit (without the physical quantity)
+    :param physical_quantity: Optional sets the associated Physical quantity, e.g. esdl.PhysicalQuantityEnum.POWER
+           or esdl.PhysicalQuantityEnum.ENERGY, esdl.PhysicalQuantityEnum.COST, also string version is supported, e.g.
+           "Power", "Energy", "Cost"
     :result: an esdl.QuantityAndUnit instance
     """
 
     qau = esdl.QuantityAndUnitType(id=str(uuid.uuid4()))
+
+    if physical_quantity:
+        if isinstance(physical_quantity, esdl.PhysicalQuantityEnum):
+            qau.physicalQuantity = physical_quantity
+        elif isinstance(physical_quantity, str):
+            pq = esdl.PhysicalQuantityEnum.from_string(physical_quantity.upper())
+            if pq:
+                qau.physicalQuantity = pq
 
     unit_parts = unit_string.split('/')
     if unit_parts:

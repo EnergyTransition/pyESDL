@@ -250,7 +250,9 @@ unit_mapping = {
     esdl.UnitEnum.WATTHOUR: {esdl.UnitEnum.JOULE: {'type': 'MULTIPLY', 'value': 3600.0}},
     esdl.UnitEnum.JOULE: {esdl.UnitEnum.WATTHOUR: {'type': 'MULTIPLY', 'value': 1.0/3600.0}},
     esdl.UnitEnum.DEGREES_CELSIUS: {esdl.UnitEnum.KELVIN: {'type': 'ADDITION', 'value': 273.15}},
-    esdl.UnitEnum.KELVIN: {esdl.UnitEnum.DEGREES_CELSIUS: {'type': 'ADDITION', 'value': -273.15}}
+    esdl.UnitEnum.KELVIN: {esdl.UnitEnum.DEGREES_CELSIUS: {'type': 'ADDITION', 'value': -273.15}},
+    esdl.UnitEnum.TONNE: {esdl.UnitEnum.GRAM: {'type': 'MULTIPLY', 'value': 1E6}},
+    esdl.UnitEnum.GRAM: {esdl.UnitEnum.TONNE: {'type': 'MULTIPLY', 'value': 1E-6}},
 }
 
 

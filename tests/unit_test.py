@@ -18,7 +18,7 @@ from esdl import esdl
 from esdl.ecore_documentation import EcoreDocumentation
 from esdl.units.conversion import get_attribute_unit, convert_to_unit, POWER_IN_W, POWER_IN_GW, ENERGY_IN_J, \
     ENERGY_IN_MWh
-from esdl.units.parser import build_qau_from_unit_string
+from esdl.units.parser import build_qau_from_unit_string, qau_to_string
 
 
 class ESDLUnitTest(unittest.TestCase):
@@ -58,6 +58,22 @@ class ESDLUnitTest(unittest.TestCase):
     def test_unit_parser(self):
         unit = build_qau_from_unit_string("TWh")
         self.assertEqual(unit.multiplier, esdl.MultiplierEnum.TERA)
+
+    def test_convert_tonne_unit(self):
+        tonne_unit = build_qau_from_unit_string("t", "weight")
+        kg_unit = build_qau_from_unit_string("kg", "weight")
+        converted = convert_to_unit(1, tonne_unit, kg_unit)
+        self.assertEqual(converted, 1E3) # 1 TONNE is 1000 KG
+
+        megaton_unit = build_qau_from_unit_string("Mt", "weight")
+        converted = convert_to_unit(1, kg_unit, megaton_unit)
+        self.assertEqual(converted, 1E-9) # 1 kg = 1E-9 Mt
+        milliton_unit = build_qau_from_unit_string("mt", "weightt")
+        print(qau_to_string(milliton_unit))
+        converted = convert_to_unit(converted, megaton_unit, milliton_unit)
+        self.assertEqual(converted, 1)  # 1E-9 Mt = 1 mt (milli tonne)
+
+
 
 
 if __name__ == '__main__':
