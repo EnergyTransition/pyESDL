@@ -129,7 +129,7 @@ def unit_to_string(qau):
     return s
 
 
-def build_qau_from_unit_string(unit_string: str, physical_quantity: Union[str, esdl.PhysicalQuantityEnum] = None):
+def build_qau_from_unit_string(unit_string: str, physical_quantity: esdl.PhysicalQuantityEnum = None):
     """
     Build an esdl.QuantityAndUnit instance from a string representing only the unit (and not the physical quantity),
     for example from "kWh/yr".
@@ -137,7 +137,8 @@ def build_qau_from_unit_string(unit_string: str, physical_quantity: Union[str, e
     :param unit_string: string representation of the QuanityAndUnit unit (without the physical quantity)
     :param physical_quantity: Optional sets the associated Physical quantity, e.g. esdl.PhysicalQuantityEnum.POWER
            or esdl.PhysicalQuantityEnum.ENERGY, esdl.PhysicalQuantityEnum.COST, also string version is supported, e.g.
-           "Power", "Energy", "Cost"
+           "Power", "Energy", "Cost" (case does not matter), but Python 3.10 does not like the
+           esdl.PhysicalQuantityEnum | str definition in the method definition.
     :result: an esdl.QuantityAndUnit instance
     """
 
