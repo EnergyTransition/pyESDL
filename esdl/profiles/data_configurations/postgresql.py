@@ -1,13 +1,13 @@
 from typing import Any
 
-import psycopg2
+import psycopg
 
 from esdl import esdl
 from esdl.profiles.data_configurations.credentials import Credentials
 
 
 class PostgresqlConfiguration():
-    connection: psycopg2._psycopg.connection
+    connection: Any
     datatable_profile: esdl.DataTableProfile
 
     def __init__(self, datatable_profile: esdl.DataTableProfile, credentials_dict: dict[str, Credentials]):
@@ -29,13 +29,13 @@ class PostgresqlConfiguration():
 
             print(f'Connecting to Postgres database at {credential.username}@{configuration.host}:'
                   f'{configuration.port or 5432}/{configuration.database}')
-            self.connection = psycopg2.connect(user=credential.username,
+            self.connection = psycopg.connect(user=credential.username,
                                                password=credential.password,
                                                host=configuration.host,
                                                port=configuration.port or 5432,
-                                               database=configuration.database,
+                                               dbname=configuration.database,
                                                )
-        except (Exception, psycopg2.Error) as error:
+        except Exception as error:
             print("Error while connecting to PostgreSQL", error)
         return self.connection
 
@@ -48,28 +48,27 @@ class PostgresqlConfiguration():
             self.connection.close()
 
     def load_data(self):
-        cursor = self.connection.cursor()
-        if self.datatable_profile.schema:
-            table = self.datatable_profile.schema + "." + self.datatable_profile.tableName
-        else:
-            table = self.datatable_profile.tableName
+        with self.connection.cursor() as cursor:
+            if self.datatable_profile.schema:
+                table = self.datatable_profile.schema + "." + self.datatable_profile.tableName
+            else:
+                table = self.datatable_profile.tableName
 
-        if self.datatable_profile.filter:
-            where = "WHERE self.datatable_profile.filter"
-        else:
-            where = ""
+            if self.datatable_profile.filter:
+                where = "WHERE self.datatable_profile.filter"
+            else:
+                where = ""
 
-        cursor.execute(f'SELECT '
-                       f'{self.datatable_profile.datetimeColumnName},{self.datatable_profile.columnName} '
-                       f'FROM {table} {where};')
-        result = cursor.fetchall()
-        # process results
-        header = [self.datatable_profile.datetimeColumnName, self.datatable_profile.columnName]
-        profile_values = []
-        for row in result:
-            profile_values.append([row[0], row[1]])
-        cursor.close()
-        return profile_values, header
+            cursor.execute(f'SELECT '
+                           f'{self.datatable_profile.datetimeColumnName},{self.datatable_profile.columnName} '
+                           f'FROM {table} {where};')
+            result = cursor.fetchall()
+            # process results
+            header = [self.datatable_profile.datetimeColumnName, self.datatable_profile.columnName]
+            profile_values = []
+            for row in result:
+                profile_values.append([row[0], row[1]])
+            return profile_values, header
 
 
 class InvalidCredentials(Exception):

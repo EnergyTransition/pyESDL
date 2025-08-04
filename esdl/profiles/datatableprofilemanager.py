@@ -11,26 +11,13 @@
 #      TNO         - Initial implementation
 #  Manager:
 #      TNO
-from dataclasses import dataclass
-from datetime import datetime
-from typing import TypedDict, Dict
-from uuid import uuid4
 
-import psycopg2
-import pytz
-from pyecore.ecore import EDate
 
 import esdl
-from esdl import DatabaseConfiguration
 from esdl.profiles.data_configurations.credentials import Credentials
 from esdl.profiles.data_configurations.postgresql import PostgresqlConfiguration
 from esdl.profiles.excelprofilemanager import ExcelProfileManager
-from esdl.profiles.profilemanager import ProfileManager, UnknownProfileNameException, ProfileType
-from influxdb import InfluxDBClient
-
-from esdl.utils.datetime_utils import parse_date
-
-
+from esdl.profiles.profilemanager import ProfileManager, ProfileType
 
 class DataTableProfileManager(ProfileManager):
     """
