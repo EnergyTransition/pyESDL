@@ -1,6 +1,7 @@
 from pyecore.ecore import EEnum
 
 import esdl
+from esdl import DatabaseConfiguration
 from esdl.profiles.datatableprofilemanager import DataTableProfileManager, Credentials
 
 if __name__ == '__main__':
@@ -30,6 +31,26 @@ if __name__ == '__main__':
     print(dtpm.profile_data_list)
     print(dtpm.get_esdl_timeseries_profile(columnName).values)
 
+
+    dtpm2 = DataTableProfileManager(dtp2)
+    dtpm2.add_credential(Credentials.create_dict("my_database", "drive", "password"))
+    dtpm2.load_database_configuration()
+    print([ value[1] for value in dtpm.profile_data_list ])
+
+
+
     # load an existing datatable profile in postgres from an ESDL
+    dtp = esdl.DataTableProfile(name="test profile", id="test", tableName="csv_data_table")
+    dtp.configuration = esdl.FileConfiguration(uri="test_profile.csv", type=esdl.FileTypeEnum.CSV)
+    dtpman = DataTableProfileManager.create(dtp)
+    print(dtpman.profile_header)
+    nw_table_config = DatabaseConfiguration(name="nw_table", id="postgres_db", database="datatableprofile",
+                                            type=esdl.DatabaseTypeEnum.POSTGRESQL,
+                                            host="localhost")
+    dtp.configuration = nw_table_config
+    dtp.schema = "essim_run_20250804"
+    dtpman.add_credential(Credentials.create_dict("postgres_db", "drive", "password"))
+    dtpman.save()
+
     # save this to Excel or CSV
 

@@ -11,3 +11,4 @@ class Credentials:
         d = dict()
         d[id] = Credentials(username, password)
         return d
+

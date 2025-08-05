@@ -11,13 +11,27 @@
 #      TNO         - Initial implementation
 #  Manager:
 #      TNO
+from os import environ
+from typing import Dict
+from uuid import uuid4
 
+from pyecore.ecore import EDate
 
 import esdl
 from esdl.profiles.data_configurations.credentials import Credentials
 from esdl.profiles.data_configurations.postgresql import PostgresqlConfiguration
 from esdl.profiles.excelprofilemanager import ExcelProfileManager
-from esdl.profiles.profilemanager import ProfileManager, ProfileType
+from esdl.profiles.profilemanager import ProfileManager, ProfileType, NoProfileLoadedExecption
+
+credentials: Dict[str, Credentials] = {}
+
+# add a default credential based on hostname based on environmental variables
+if environ.get("DB_HOST", None):
+    host = environ.get('DB_HOST', 'localhost')
+    credentials[host] = Credentials(username=environ.get("DB_USER", None),
+                                    password=environ.get("DB_PASSWORD", None))
+    print(f"Detected DB credentials for {host}")
+
 
 class DataTableProfileManager(ProfileManager):
     """
@@ -36,7 +50,6 @@ class DataTableProfileManager(ProfileManager):
         """
         super().__init__()
         self.profile_type = ProfileType.DATETIME_LIST
-        self.connection = None
 
         if data_table_profile:
             self.data_table_profile = data_table_profile
@@ -46,14 +59,28 @@ class DataTableProfileManager(ProfileManager):
         if source_profile:
             self.convert(source_profile)
 
-    def load_database_configuration(self, configuration: esdl.DatabaseConfiguration, credentials_dict: dict[str, Credentials]):
+    def add_credential(self, credentials_dict: Dict[str, Credentials]):
+        credentials.update(credentials_dict)
+
+    def set_data_table_profile(self, data_table_profile: esdl.DataTableProfile):
+        self.data_table_profile = data_table_profile
+
+    def load_database_configuration(self, configuration: esdl.DatabaseConfiguration = None,
+                                    credentials_dict: dict[str, Credentials] = None):
         """
         Loads profile information from a database configuration
 
-        :param configuration: the database configuration
+        :param configuration: the database configuration, optional, otherwise
+                            the one provided in the constructor is used
         :param credentials_dict: optional credentials dict to use to connect to the database
         :return: None
         """
+        if not configuration:
+            configuration = self.data_table_profile.configuration
+
+        if not credentials_dict:
+            credentials_dict = credentials
+
         self.clear_profile()
         self.profile_type = ProfileType.DATETIME_LIST
 
@@ -67,26 +94,27 @@ class DataTableProfileManager(ProfileManager):
                 dt_index = self.get_profile_name_index(self.data_table_profile.datetimeColumnName)
                 self.start_datetime = self.profile_data_list[0][dt_index]
                 self.end_datetime = self.profile_data_list[-1][dt_index]
-
         else:
             raise UnsupportedDataConfiguration(
                 f"DataConfiguration of type {configuration.type.name} is not yet supported")
 
-
     @staticmethod
-    def _parse_esdl_profile_filters(esdl_filters):
-       pass
-
-    @staticmethod
-    def create(data_table_profile: esdl.DataTableProfile, credentials_dict: dict[str, Credentials] = None) -> 'DataTableProfileManager':
+    def create(data_table_profile: esdl.DataTableProfile,
+               credentials_dict: dict[str, Credentials] = None) -> 'DataTableProfileManager':
         """
-        method to create an instance of DataTableProfileManager using an esdl.DataTableProfile. The data referenced to in
+        Static method to create an instance of DataTableProfileManager using an esdl.DataTableProfile. The data
+        referenced to in
         the profile is loaded from the associated DataConfiguration (e.g. DatabaseConfiguration or FileConfiguration)
 
         :param data_table_profile: esdl.DataTableProfile that is used as an input profile
         :param credentials_dict: dictionary of credentials to use for authentication with ['id' -> Credentials] mapping, where
         'id' refers to the id of the AbstractDataConfiguration that belongs to these credentials
         """
+
+        if not credentials_dict:
+            # use global credentials list
+            credentials_dict = credentials
+
         configuration = data_table_profile.configuration
 
         if configuration is None:
@@ -108,37 +136,70 @@ class DataTableProfileManager(ProfileManager):
                 dtpman.load_csv(configuration.uri)
                 return dtpman
             else:
-                raise UnsupportedDataConfiguration(f"DataConfiguration of type {configuration.type.name} is not yet supported")
+                raise UnsupportedDataConfiguration(
+                    f"DataConfiguration of type {configuration.type.name} is not yet supported")
         else:
             raise UnsupportedDataConfiguration(
                 f"DataConfiguration {configuration} is not yet supported")
 
-
-
-    def get_esdl_influxdb_profile(self, measurement: str, field_names: list, tags: dict = None):
+    def get_data_table_profile(self, table_name: str, profile_name: str = None,
+                               schema_name: str = None) -> esdl.DataTableProfile:
+        """Creates an esdl.DataTableProfile instance that refers to the data loaded in this ProfileManager
+        :param table_name: name of the table
+        :param profile_name: name of the profile (one of the columns retrieved from the database)
+        :param schema_name: name of the schema, if required. Defaults to None
         """
-        Creates an esdl.InfluxDBProfile instance (or a list of instances) that refers to the data in the database.
-        Is called by load_influxdb and save_influxdb
 
-        :param measurement: name of the InfluxDB measurement where the data must be written to
-        :param field_names: list of the fields that should be written to InfluxDB
-        :param tags: dictionary with tags and tag values, that should be used when writing this data to InfluxDB
-        :return: an esdl.InfluxDBProfile instance or a list of esdl.InfluxDBProfile instances in case multiple fields
-                 were specified, with proper references to the data in the database
-        """
-        pass
+        if len(self.profile_header) == 0:
+            raise NoProfileLoadedExecption("No profile loaded, header is empty.")
+        profile_name_index = self.get_profile_name_index(profile_name)
+        profile_name = self.profile_header[profile_name_index]
+        datetime_columnname = self.profile_header[0]
+        # TODO if data loaded with more columns: create a list
+        self.data_table_profile = esdl.DataTableProfile(
+            id=str(uuid4()),
+            name=profile_name,
+            table_name=table_name,
+            datetimeColumnName=datetime_columnname,
+            columnName=profile_name,
+            schema=schema_name,
+            startDate=EDate.from_string(self.start_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
+            endDate=EDate.from_string(self.end_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
+        )
 
-    def save_influxdb(self, measurement: str, field_names: list, tags: dict = None):
+        return self.data_table_profile
+
+    def save_tags(self, table: str, column_names: list, schema: str = None, tags: dict = None):
         """
         Saves profile information to InfluxDB
 
-        :param measurement: name of the InfluxDB measurement where the data must be written to
-        :param field_names: list of the fields that should be written to InfluxDB
-        :param tags: dictionary with tags and tag values, that should be used when writing this data to InfluxDB
-        :return: an esdl.InfluxDBProfile instance or a list of esdl.InfluxDBProfile instances in case multiple fields
+        :param table: name of the table where the data must be written to. Table is created when not existing
+        :param column_names: list of the columns that should be written
+        :param tags: dictionary with tags and tag values, that should be used when writing this data in a JSON column
+                    in the database
+        :param schema: name of the schema, if required.
+        :return: an esdl.DataTableProfile instance or a list of esdl.DataTableProfile instances in case multiple fields
                  were specified, with proper references to the data in the database
         """
         pass
+
+    def save(self, credentials_dict: dict[str, Credentials] = None):
+        """
+        Saves the current datatable profile to the database
+        :return: Data written in the database and an esdl.DataTableProfile that reflects this.
+        """
+
+        if not credentials_dict:
+            credentials_dict = credentials
+
+        if self.data_table_profile.configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
+            # handle postgres
+            postgres = PostgresqlConfiguration(self.data_table_profile, credentials_dict)
+            postgres.save_data(self.profile_data_list, self.profile_header)
+            postgres.disconnect()
+        else:
+            raise UnsupportedDataConfiguration(
+                f"DataConfiguration {self.data_table_profile.configuration.type.name} is not (yet) supported")
 
 
 class NoDataException(Exception):
@@ -155,9 +216,11 @@ class WrongTagsFormatException(Exception):
     """Thrown when the tags parameter has the wrong structure"""
     pass
 
+
 class InvalidDataConfiguration(Exception):
     """Thrown when there is no or invalid DataConfiguration"""
     pass
+
 
 class UnsupportedDataConfiguration(Exception):
     """Thrown when this DataConfiguration is not supported"""
