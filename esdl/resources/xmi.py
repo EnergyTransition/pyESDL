@@ -7,7 +7,7 @@ The xmi module introduces XMI resource and XMI parsing.
 """
 from enum import unique, Enum
 from functools import lru_cache
-from lxml.etree import parse, QName, Element, SubElement, ElementTree
+from lxml.etree import parse, QName, Element, SubElement, ElementTree, _Comment
 from pyecore.resources.resource import Resource
 from pyecore.ecore import EClass, EStringToStringMapEntry, EAnnotation, EProxy, \
                     EDataType
@@ -152,6 +152,8 @@ class XMIResource(Resource):
             eobject.__setattr__(eattribute._name, val)
 
     def _decode_eobject(self, current_node, parent_eobj):
+        if isinstance(current_node, _Comment):
+            return  # ignore comments
         eobject_info = self._decode_node(parent_eobj, current_node)
         feat_container, eobject, eatts, erefs, from_tag = eobject_info
 
