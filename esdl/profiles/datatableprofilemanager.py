@@ -35,15 +35,15 @@ if environ.get("DB_HOST", None):
 
 class DataTableProfileManager(ProfileManager):
     """
-    InfluxDBProfileManager: manages profile data that can be loaded from and saved to InfluxDB (v1 only).
-    InfluxDBProfileManager is a subclass of ProfileManager, so it also provides functionality to convert from/to
+    DataTableProfileManager: manages profile data that can be loaded from and saved to databases or files
+    DataTableProfileManager is a subclass of ProfileManager, so it also provides functionality to convert from/to
     different ESDL profiles and to load/save to CSV
     """
     data_table_profile: esdl.DataTableProfile
 
     def __init__(self, data_table_profile: esdl.DataTableProfile = None, source_profile=None):
         """
-        Constructor of the InfluxDBProfileManager
+        Constructor of the DataTableProfileManager
 
         :param data_table_profile: the DataTableProfile to load
         :param source_profile: the source profile of which the data is copied into this profiles manager instance
@@ -103,12 +103,12 @@ class DataTableProfileManager(ProfileManager):
                credentials_dict: dict[str, Credentials] = None) -> 'DataTableProfileManager':
         """
         Static method to create an instance of DataTableProfileManager using an esdl.DataTableProfile. The data
-        referenced to in
-        the profile is loaded from the associated DataConfiguration (e.g. DatabaseConfiguration or FileConfiguration)
+        referenced to in the profile is loaded from the associated DataConfiguration (e.g. DatabaseConfiguration or
+        FileConfiguration)
 
         :param data_table_profile: esdl.DataTableProfile that is used as an input profile
-        :param credentials_dict: dictionary of credentials to use for authentication with ['id' -> Credentials] mapping, where
-        'id' refers to the id of the AbstractDataConfiguration that belongs to these credentials
+        :param credentials_dict: dictionary of credentials to use for authentication with ['id' -> Credentials] mapping,
+        where 'id' refers to the id of the AbstractDataConfiguration that belongs to these credentials
         """
 
         if not credentials_dict:
