@@ -68,6 +68,7 @@ class PostgresqlConfiguration:
             else:
                 where = ""
 
+            # todo make this safe SQL
             cursor.execute(f'SELECT '
                            f'{self.datatable_profile.datetimeColumnName},{self.datatable_profile.columnName} '
                            f'FROM {table} {where};')
@@ -89,6 +90,8 @@ class PostgresqlConfiguration:
         """
         if not self.connection:
             raise Exception('PostgreSQL connection not established')
+        if not self.datatable_profile.tableName:
+            raise InvalidDataTableProfile(f"Missing tableName in DataTableProfile with id={self.datatable_profile.id}")
 
         if self.datatable_profile.schema:
             table = sql.Identifier(self.datatable_profile.schema, self.datatable_profile.tableName)
@@ -128,7 +131,26 @@ class PostgresqlConfiguration:
 
             self.connection.commit()
 
+    def save_meta_data(self, datatable_profile: esdl.DataTableProfile):
+        """
+        Meta data format in schema
+        | table name | Unit | Quantity | description |
+        :param datatable_profile: the data table profile including unit information and description
+        :return: None
+        """
+        qau = datatable_profile.profileQuantityAndUnit
+        if qau is None or qau.unit is None or qau.unit == esdl.QuantityAndUnitType.UNDEFINED or \
+            qau.physicalQuantity is None or qau.physicalQuantity is esdl.PhysicalQuantityEnum.UNDEFINED:
+            raise InvalidDataTableProfile(f"Missing Quantity and unit information for DataTableProfile with id={datatable_profile.id}")
+
+        #datatable_profile.
+
+        pass
 
 
 class InvalidCredentials(Exception):
+    pass
+
+class InvalidDataTableProfile(Exception):
+    """Thrown when the DataTableProfile is not complete"""
     pass

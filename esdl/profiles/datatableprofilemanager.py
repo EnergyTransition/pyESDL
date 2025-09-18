@@ -23,13 +23,13 @@ from esdl.profiles.data_configurations.postgresql import PostgresqlConfiguration
 from esdl.profiles.excelprofilemanager import ExcelProfileManager
 from esdl.profiles.profilemanager import ProfileManager, ProfileType, NoProfileLoadedExecption
 
-credentials: Dict[str, Credentials] = {}
+global_credentials: Dict[str, Credentials] = {}
 
 # add a default credential based on hostname based on environmental variables
 if environ.get("DB_HOST", None):
     host = environ.get('DB_HOST', 'localhost')
-    credentials[host] = Credentials(username=environ.get("DB_USER", None),
-                                    password=environ.get("DB_PASSWORD", None))
+    global_credentials[host] = Credentials(username=environ.get("DB_USER", None),
+                                           password=environ.get("DB_PASSWORD", None))
     print(f"Detected DB credentials for {host}")
 
 
@@ -60,7 +60,7 @@ class DataTableProfileManager(ProfileManager):
             self.convert(source_profile)
 
     def add_credential(self, credentials_dict: Dict[str, Credentials]):
-        credentials.update(credentials_dict)
+        global_credentials.update(credentials_dict)
 
     def set_data_table_profile(self, data_table_profile: esdl.DataTableProfile):
         self.data_table_profile = data_table_profile
@@ -68,7 +68,8 @@ class DataTableProfileManager(ProfileManager):
     def load_database_configuration(self, configuration: esdl.DatabaseConfiguration = None,
                                     credentials_dict: dict[str, Credentials] = None):
         """
-        Loads profile information from a database configuration
+        Loads profile information from a database configuration into
+        profile_info and profile_header
 
         :param configuration: the database configuration, optional, otherwise
                             the one provided in the constructor is used
@@ -77,9 +78,11 @@ class DataTableProfileManager(ProfileManager):
         """
         if not configuration:
             configuration = self.data_table_profile.configuration
+        if not configuration:
+            raise InvalidDataConfiguration("Missing configuration of DataTableProfile")
 
         if not credentials_dict:
-            credentials_dict = credentials
+            credentials_dict = global_credentials
 
         self.clear_profile()
         self.profile_type = ProfileType.DATETIME_LIST
@@ -99,12 +102,15 @@ class DataTableProfileManager(ProfileManager):
                 f"DataConfiguration of type {configuration.type.name} is not yet supported")
 
     @staticmethod
-    def create(data_table_profile: esdl.DataTableProfile,
-               credentials_dict: dict[str, Credentials] = None) -> 'DataTableProfileManager':
+    def load(data_table_profile: esdl.DataTableProfile,
+             credentials_dict: dict[str, Credentials] = None) -> 'DataTableProfileManager':
         """
         Static method to create an instance of DataTableProfileManager using an esdl.DataTableProfile. The data
         referenced to in the profile is loaded from the associated DataConfiguration (e.g. DatabaseConfiguration or
         FileConfiguration)
+
+        Note:
+        - uri without extension is used as tableName for CSV files
 
         :param data_table_profile: esdl.DataTableProfile that is used as an input profile
         :param credentials_dict: dictionary of credentials to use for authentication with ['id' -> Credentials] mapping,
@@ -113,7 +119,7 @@ class DataTableProfileManager(ProfileManager):
 
         if not credentials_dict:
             # use global credentials list
-            credentials_dict = credentials
+            credentials_dict = global_credentials
 
         configuration = data_table_profile.configuration
 
@@ -134,6 +140,7 @@ class DataTableProfileManager(ProfileManager):
             elif configuration.type == esdl.FileTypeEnum.CSV:
                 dtpman = DataTableProfileManager(data_table_profile)
                 dtpman.load_csv(configuration.uri)
+                data_table_profile.tableName = configuration.uri.split('.')[0] if configuration.uri else "csv_file"
                 return dtpman
             else:
                 raise UnsupportedDataConfiguration(
@@ -190,7 +197,7 @@ class DataTableProfileManager(ProfileManager):
         """
 
         if not credentials_dict:
-            credentials_dict = credentials
+            credentials_dict = global_credentials
 
         if self.data_table_profile.configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
             # handle postgres
