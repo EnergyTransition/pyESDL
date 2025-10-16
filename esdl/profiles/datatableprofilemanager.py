@@ -176,19 +176,19 @@ class DataTableProfileManager(ProfileManager):
 
         return self.data_table_profile
 
-    def save_tags(self, table: str, column_names: list, schema: str = None, tags: dict = None):
-        """
-        Saves profile information to InfluxDB
-
-        :param table: name of the table where the data must be written to. Table is created when not existing
-        :param column_names: list of the columns that should be written
-        :param tags: dictionary with tags and tag values, that should be used when writing this data in a JSON column
-                    in the database
-        :param schema: name of the schema, if required.
-        :return: an esdl.DataTableProfile instance or a list of esdl.DataTableProfile instances in case multiple fields
-                 were specified, with proper references to the data in the database
-        """
-        pass
+    # def save_tags(self, table: str, column_names: list, schema: str = None, tags: dict = None):
+    #     """
+    #     Saves profile information to InfluxDB
+    #
+    #     :param table: name of the table where the data must be written to. Table is created when not existing
+    #     :param column_names: list of the columns that should be written
+    #     :param tags: dictionary with tags and tag values, that should be used when writing this data in a JSON column
+    #                 in the database
+    #     :param schema: name of the schema, if required.
+    #     :return: an esdl.DataTableProfile instance or a list of esdl.DataTableProfile instances in case multiple fields
+    #              were specified, with proper references to the data in the database
+    #     """
+    #     pass
 
     def save(self, credentials_dict: dict[str, Credentials] = None):
         """

@@ -1,3 +1,4 @@
+from logging import warning, error
 from typing import Any, Optional, List
 
 import psycopg
@@ -5,7 +6,16 @@ from psycopg import Connection, sql
 
 from esdl import esdl
 from esdl.profiles.data_configurations.credentials import Credentials
+from esdl.units.parser import unit_to_string, build_qau_from_unit_string
 
+# table name used for storing metadata that is not in the table
+META_DATA_TABLE_NAME = "datatable_metadata"
+META_DATA_TABLE_COLUMNS = ["table_name", "column_name",  "physical_quantity", "unit", "profile_name"]
+META_DATA_TABLE_COLUMN_LENGTH = [32, 32, 32, 32, 255]  # VARCHAR lengths
+META_DATA_TABLE_NOT_NULL = [True, True, False, False, False]
+
+# set to True to enable debugging of SQL statements
+DEBUG_SQL = False
 
 class PostgresqlConfiguration:
     connection: Optional[Connection]
@@ -30,7 +40,8 @@ class PostgresqlConfiguration:
                     raise InvalidCredentials(f"DataConfiguration '{configuration.id}' is has no associated credentials"
                                                f" to use for connecting to the Postgres database")
 
-            print(f'Connecting to Postgres database at {credential.username}@{configuration.host}:'
+            if DEBUG_SQL:
+                print(f'Connecting to Postgres database at {credential.username}@{configuration.host}:'
                   f'{configuration.port or 5432}/{configuration.database}')
             self.connection = psycopg.connect(user=credential.username,
                                                password=credential.password,
@@ -64,7 +75,7 @@ class PostgresqlConfiguration:
 
             # warning: this is unquoted SQL...
             if self.datatable_profile.filter:
-                where = "WHERE self.datatable_profile.filter"
+                where = f"WHERE {self.datatable_profile.filter}"
             else:
                 where = ""
 
@@ -78,7 +89,43 @@ class PostgresqlConfiguration:
             profile_values = []
             for row in result:
                 profile_values.append([row[0], row[1]])
+            self.load_meta_data()
             return profile_values, header
+
+    def load_meta_data(self):
+        """
+        Loads metadata from
+        :return:
+        """
+        if not self.connection:
+            raise Exception('PostgreSQL connection not established')
+        with self.connection.cursor() as cursor:
+            if self.datatable_profile.schema:
+                table = sql.Identifier(self.datatable_profile.schema, META_DATA_TABLE_NAME)
+            else:
+                table = sql.Identifier(META_DATA_TABLE_NAME)
+
+            columns = [sql.Identifier(c) for c in META_DATA_TABLE_COLUMNS]
+            query = sql.SQL("SELECT {fields} FROM {table} WHERE table_name=%s AND column_name=%s").format(
+                fields=sql.SQL(', ').join(columns),
+                table=table
+            )
+            if DEBUG_SQL:
+                print(query.as_string(cursor))
+
+            cursor.execute(query, (self.datatable_profile.tableName, self.datatable_profile.columnName))
+            result = cursor.fetchone()
+            if result:
+                result_dict = dict(zip(META_DATA_TABLE_COLUMNS, result))
+                if result_dict["unit"] and result_dict["physical_quantity"]:
+                    qau = build_qau_from_unit_string(result_dict["unit"], result_dict["physical_quantity"])
+                    if DEBUG_SQL:
+                        print(f'QaU metadata found: {result_dict["unit"]} in {result_dict["physical_quantity"]}')
+                    self.datatable_profile.profileQuantityAndUnit = qau
+            else:
+                warning(f"No metadata found for table {table.as_string()} and column '{self.datatable_profile.columnName}'"
+                      f" in database '{self.datatable_profile.configuration.database}', cannot derive unit")
+
 
 
     def save_data(self, profile_values: List[List[Any]], header: List[str]):
@@ -109,16 +156,15 @@ class PostgresqlConfiguration:
             # create schema and table if not exists
             if self.datatable_profile.schema:
                 query = sql.SQL('CREATE SCHEMA IF NOT EXISTS {schema}').format(schema=sql.Identifier(self.datatable_profile.schema))
-                print(query.as_string(cursor))
+                if DEBUG_SQL:
+                    print(query.as_string(cursor))
                 cursor.execute(query)
             sql_string = f"CREATE TABLE IF NOT EXISTS " + "{table}" + f" ({insert_column_statement})"
             query = sql.SQL(sql_string).format(table=table)
-            #print(query.as_string(cursor))
             cursor.execute(query)
 
             columns = sql.SQL(', ').join(sql.Identifier(h) for h in header)
             query = sql.SQL("COPY {table} ({columns}) FROM STDIN").format(table=table, columns=columns)
-            #print("Insert query: ", query.as_string(cursor))
             with cursor.copy(query) as copy:
                 for row in profile_values:
                     copy.write_row(row)
@@ -127,28 +173,78 @@ class PostgresqlConfiguration:
             # Set extra information in tableName_metadata table (in same schema)
             # such as Unit, Quantity, multiplier, and name of profile (and id?)
 
-
-
+            for column_name in header:
+                self.save_meta_data(self.datatable_profile, column_name)
             self.connection.commit()
 
-    def save_meta_data(self, datatable_profile: esdl.DataTableProfile):
+    def save_meta_data(self, datatable_profile: esdl.DataTableProfile, column_name: str = None):
         """
         Meta data format in schema
-        | table name | Unit | Quantity | description |
+        | table name | column_name | Unit | Quantity | description |
         :param datatable_profile: the data table profile including unit information and description
+        :param column_name: [optional] the column name if not set in the datatable profile
+                (when inserting multiple columns)
         :return: None
         """
         qau = datatable_profile.profileQuantityAndUnit
-        if qau is None or qau.unit is None or qau.unit == esdl.QuantityAndUnitType.UNDEFINED or \
+        if qau is None or qau.unit is None or qau.unit == esdl.UnitEnum.NONE or \
             qau.physicalQuantity is None or qau.physicalQuantity is esdl.PhysicalQuantityEnum.UNDEFINED:
             raise InvalidDataTableProfile(f"Missing Quantity and unit information for DataTableProfile with id={datatable_profile.id}")
 
-        #datatable_profile.
 
-        pass
+        if self.datatable_profile.schema:
+            table = sql.Identifier(self.datatable_profile.schema, META_DATA_TABLE_NAME)
+        else:
+            table = sql.Identifier(META_DATA_TABLE_NAME)
+
+        # META_DATA_TABLE_COLUMNS = ["table_name", "column_name",  "quantity", "unit", "description"]
+        insert_columns = [f"{c} VARCHAR({n}) {'NOT NULL' if nn else ''}"
+                          for c,n,nn in zip(META_DATA_TABLE_COLUMNS,
+                                            META_DATA_TABLE_COLUMN_LENGTH,
+                                            META_DATA_TABLE_NOT_NULL)]
+        insert_column_statement = ",\n".join(insert_columns)
+        sql_string = "CREATE TABLE IF NOT EXISTS {table}" + \
+                      f" ({insert_column_statement} " + \
+                      f", PRIMARY KEY ({META_DATA_TABLE_COLUMNS[0]},{META_DATA_TABLE_COLUMNS[1]}))"
+        with self.connection.cursor() as cursor:
+            # create metadata table if not exists
+            query = sql.SQL(sql_string).format(table=table)
+            if DEBUG_SQL:
+                print(query.as_string(cursor))
+            cursor.execute(query)
+
+            # insert data if not exists
+            upsert_sql = "INSERT INTO {table} " + f"({','.join(META_DATA_TABLE_COLUMNS)}) VALUES " + \
+                        f"({','.join( ['%s'] * len(META_DATA_TABLE_COLUMNS) )})" +\
+                        f" ON CONFLICT ({','.join(META_DATA_TABLE_COLUMNS[:2])} ) DO UPDATE SET ({','.join(META_DATA_TABLE_COLUMNS[2:])}) = " + \
+                         "(" + ','.join([f'EXCLUDED.{column}' for column in META_DATA_TABLE_COLUMNS[2:]]) + ")"
+            # TODO: add update statement on conflict / support Upsert
+            query = sql.SQL(upsert_sql).format(table=table)
+            if DEBUG_SQL:
+                print(query.as_string(cursor))
+            unit_string = unit_to_string(qau)
+            if datatable_profile.columnName:
+                insert_column_name = datatable_profile.columnName
+            else:
+                insert_column_name = column_name
+            try:
+                cursor.execute(query, (datatable_profile.tableName,
+                                   insert_column_name,
+                                   unit_string,
+                                   qau.physicalQuantity.name,
+                                   datatable_profile.name))
+            except Exception as e:
+                error("Error", e)
+
+
+
+
+
+
 
 
 class InvalidCredentials(Exception):
+    """Thrown when no credentials are provided for connecting to PostgreSQL."""
     pass
 
 class InvalidDataTableProfile(Exception):
