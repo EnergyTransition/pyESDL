@@ -172,7 +172,7 @@ def equals(base_unit: esdl.QuantityAndUnitType, other: esdl.QuantityAndUnitType)
     """Checks if two units are equal based on physical quantity, multiplier, perMultiplier and perUnit attributes"""
     if base_unit.unit == other.unit and \
             base_unit.multiplier == other.multiplier and \
-            base_unit.perUnit == other.per_unit and \
+            base_unit.perUnit == other.perUnit and \
             base_unit.perMultiplier == other.perMultiplier and \
             base_unit.physicalQuantity == other.physicalQuantity:
         return True

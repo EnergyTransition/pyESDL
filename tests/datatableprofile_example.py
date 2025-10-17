@@ -4,7 +4,7 @@ import esdl
 from esdl import DatabaseConfiguration
 from esdl.profiles.datatableprofilemanager import DataTableProfileManager, Credentials
 from esdl.support_functions import deepcopy
-from esdl.units.conversion import POWER_IN_kW, POWER_IN_MW, POWER_IN_W
+from esdl.units.conversion import POWER_IN_kW, POWER_IN_MW, POWER_IN_W, convert_to_unit, equals
 from esdl.units.parser import qau_to_string
 
 if __name__ == '__main__':
@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     # load data from CSV into postgres from an ESDL DataTable profile definition
     dtp = esdl.DataTableProfile(name="test profile", id="test", tableName="csv_data_table")
-    dtp.profileQuantityAndUnit = POWER_IN_W.deepcopy()
+    dtp.profileQuantityAndUnit = POWER_IN_kW.deepcopy()
     dtp.configuration = esdl.FileConfiguration(uri="test_profile.csv", type=esdl.FileTypeEnum.CSV)
     dtpman = DataTableProfileManager.load(dtp)
     print(dtpman.profile_header)
@@ -76,5 +76,6 @@ if __name__ == '__main__':
                                                    id="postgres_db", host="localhost", database="datatableprofile")
     dtpmanager = DataTableProfileManager.load(my_dtp, Credentials.create_dict(my_dtp.configuration.id, "drive", "password"))
     print(qau_to_string(dtp.profileQuantityAndUnit))
+    assert(equals(POWER_IN_kW, dtp.profileQuantityAndUnit))
 
 

@@ -1,18 +1,25 @@
+import logging
+from dataclasses import dataclass
 from logging import warning, error
 from typing import Any, Optional, List
 
 import psycopg
 from psycopg import Connection, sql
 
-from esdl import esdl
+from esdl import esdl, QuantityAndUnitType, PhysicalQuantityEnum
 from esdl.profiles.data_configurations.credentials import Credentials
 from esdl.units.parser import unit_to_string, build_qau_from_unit_string
 
 # table name used for storing metadata that is not in the table
 META_DATA_TABLE_NAME = "datatable_metadata"
 META_DATA_TABLE_COLUMNS = ["table_name", "column_name",  "physical_quantity", "unit", "profile_name"]
-META_DATA_TABLE_COLUMN_LENGTH = [32, 32, 32, 32, 255]  # VARCHAR lengths
+META_DATA_TABLE_COLUMN_LENGTH = [64, 64, 32, 32, 255]  # VARCHAR lengths
 META_DATA_TABLE_NOT_NULL = [True, True, False, False, False]
+
+@dataclass
+class DataTableMetaData:
+    qau: Optional[QuantityAndUnitType]
+    name: Optional[str]
 
 # set to True to enable debugging of SQL statements
 DEBUG_SQL = False
@@ -65,8 +72,15 @@ class PostgresqlConfiguration:
             self.connection.close()
 
     def load_data(self):
+        """
+        Returns a tuple of profile_values[[]], header[], List[DataTableMetaData]
+        """
         if not self.connection:
             raise Exception('PostgreSQL connection not established')
+        # if not self.datatable_profile.columnName:
+        #     raise InvalidDataTableProfile('DataTableProfile columnName not defined')
+
+
         with self.connection.cursor() as cursor:
             if self.datatable_profile.schema:
                 table = self.datatable_profile.schema + "." + self.datatable_profile.tableName
@@ -79,20 +93,34 @@ class PostgresqlConfiguration:
             else:
                 where = ""
 
-            # todo make this safe SQL
-            cursor.execute(f'SELECT '
-                           f'{self.datatable_profile.datetimeColumnName},{self.datatable_profile.columnName} '
-                           f'FROM {table} {where};')
+            if self.datatable_profile.columnName:
+                # todo make this safe SQL
+                cursor.execute(f'SELECT '
+                               f'{self.datatable_profile.datetimeColumnName},{self.datatable_profile.columnName} '
+                               f'FROM {table} {where};')
+            else:
+                cursor.execute(f'SELECT * FROM {table} {where};')
             result = cursor.fetchall()
             # process results
-            header = [self.datatable_profile.datetimeColumnName, self.datatable_profile.columnName]
+            columns = cursor.description
+            column_names = [c.name for c in columns]
+            datetime_column_index = [c.type_display for c in columns].index('timestamp')
+            dt_colum = column_names.pop(datetime_column_index)
+            header = [dt_colum, *column_names]
+
             profile_values = []
             for row in result:
-                profile_values.append([row[0], row[1]])
-            self.load_meta_data()
-            return profile_values, header
+                copy = list(row)
+                datetime = copy.pop(datetime_column_index)
+                profile_values.append([datetime, *copy])
+            metadata: List[DataTableMetaData] = []
+            for c in [dt_colum, *column_names]:
+                dtmd = self.load_meta_data(c)
+                metadata.append(dtmd)
 
-    def load_meta_data(self):
+            return profile_values, header, metadata
+
+    def load_meta_data(self, column_name: str = None):
         """
         Loads metadata from
         :return:
@@ -113,18 +141,24 @@ class PostgresqlConfiguration:
             if DEBUG_SQL:
                 print(query.as_string(cursor))
 
-            cursor.execute(query, (self.datatable_profile.tableName, self.datatable_profile.columnName))
+            if self.datatable_profile.columnName:
+                column_name = self.datatable_profile.columnName
+            cursor.execute(query, (self.datatable_profile.tableName, column_name))
             result = cursor.fetchone()
             if result:
                 result_dict = dict(zip(META_DATA_TABLE_COLUMNS, result))
-                if result_dict["unit"] and result_dict["physical_quantity"]:
+                if result_dict["unit"] or result_dict["physical_quantity"]:
                     qau = build_qau_from_unit_string(result_dict["unit"], result_dict["physical_quantity"])
                     if DEBUG_SQL:
                         print(f'QaU metadata found: {result_dict["unit"]} in {result_dict["physical_quantity"]}')
                     self.datatable_profile.profileQuantityAndUnit = qau
+                if result_dict["profile_name"]:
+                    self.datatable_profile.name = result_dict["profile_name"]
+                return DataTableMetaData(qau, result_dict["profile_name"])
             else:
                 warning(f"No metadata found for table {table.as_string()} and column '{self.datatable_profile.columnName}'"
                       f" in database '{self.datatable_profile.configuration.database}', cannot derive unit")
+                return None
 
 
 
@@ -149,9 +183,14 @@ class PostgresqlConfiguration:
 
         with self.connection.cursor() as cursor:
             non_datetime_columns = list(header)
-            non_datetime_columns.remove(self.datatable_profile.datetimeColumnName)
-            insert_columns = [f"{c} DOUBLE PRECISION" for c in non_datetime_columns]
-            insert_columns.insert(0, f"{self.datatable_profile.datetimeColumnName} TIMESTAMP")
+            try:
+                non_datetime_columns.remove(self.datatable_profile.datetimeColumnName)
+            except ValueError as e:
+                logging.error(f"Cannot find datetime column '{self.datatable_profile.datetimeColumnName}' in dataset, ")
+                logging.error(f"configure using esdl.DataTableProfile.datetimeColumnName")
+                exit(1)
+            insert_columns = [f'"{c}" DOUBLE PRECISION' for c in non_datetime_columns]
+            insert_columns.insert(0, f'"{self.datatable_profile.datetimeColumnName}" TIMESTAMP')
             insert_column_statement = ",\n".join(insert_columns)
             # create schema and table if not exists
             if self.datatable_profile.schema:
@@ -161,10 +200,16 @@ class PostgresqlConfiguration:
                 cursor.execute(query)
             sql_string = f"CREATE TABLE IF NOT EXISTS " + "{table}" + f" ({insert_column_statement})"
             query = sql.SQL(sql_string).format(table=table)
+            if DEBUG_SQL:
+                print(query.as_string(cursor))
             cursor.execute(query)
+            self.connection.commit()
+
 
             columns = sql.SQL(', ').join(sql.Identifier(h) for h in header)
             query = sql.SQL("COPY {table} ({columns}) FROM STDIN").format(table=table, columns=columns)
+            if DEBUG_SQL:
+                print(query.as_string(cursor))
             with cursor.copy(query) as copy:
                 for row in profile_values:
                     copy.write_row(row)
@@ -190,6 +235,8 @@ class PostgresqlConfiguration:
         if qau is None or qau.unit is None or qau.unit == esdl.UnitEnum.NONE or \
             qau.physicalQuantity is None or qau.physicalQuantity is esdl.PhysicalQuantityEnum.UNDEFINED:
             raise InvalidDataTableProfile(f"Missing Quantity and unit information for DataTableProfile with id={datatable_profile.id}")
+        if column_name == datatable_profile.datetimeColumnName:
+            qau = QuantityAndUnitType(id="time", unit=esdl.UnitEnum.NONE, physicalQuantity=esdl.PhysicalQuantityEnum.TIME)
 
 
         if self.datatable_profile.schema:
@@ -230,8 +277,8 @@ class PostgresqlConfiguration:
             try:
                 cursor.execute(query, (datatable_profile.tableName,
                                    insert_column_name,
-                                   unit_string,
                                    qau.physicalQuantity.name,
+                                   unit_string,
                                    datatable_profile.name))
             except Exception as e:
                 error("Error", e)
