@@ -12,12 +12,13 @@
 #  Manager:
 #      TNO
 from os import environ
-from typing import Dict, List
+from typing import Dict, List, Any
 from uuid import uuid4
 
 from pyecore.ecore import EDate
 
 import esdl
+from esdl import DataTableProfile
 from esdl.profiles.data_configurations.credentials import Credentials
 from esdl.profiles.data_configurations.postgresql import PostgresqlConfiguration, DataTableMetaData
 from esdl.profiles.excelprofilemanager import ExcelProfileManager
@@ -94,11 +95,12 @@ class DataTableProfileManager(ProfileManager):
             postgres = PostgresqlConfiguration(self.data_table_profile, credentials_dict)
             self.profile_data_list, self.profile_header, self.metadata = postgres.load_data()
             postgres.disconnect()
-            self.num_profile_items = len(self.profile_data_list)
-            if self.num_profile_items > 0:
-                dt_index = self.get_profile_name_index(self.data_table_profile.datetimeColumnName)
-                self.start_datetime = self.profile_data_list[0][dt_index]
-                self.end_datetime = self.profile_data_list[-1][dt_index]
+            if len(self.profile_data_list) > 0:
+                self.num_profile_items = len(self.profile_data_list[0])
+                if self.num_profile_items > 0:
+                    dt_index = self.get_profile_name_index(self.data_table_profile.datetimeColumnName)
+                    self.start_datetime = self.profile_data_list[0][dt_index]
+                    self.end_datetime = self.profile_data_list[-1][dt_index]
         else:
             raise UnsupportedDataConfiguration(
                 f"DataConfiguration of type {configuration.type.name} is not yet supported")
@@ -154,11 +156,11 @@ class DataTableProfileManager(ProfileManager):
             raise UnsupportedDataConfiguration(
                 f"DataConfiguration {configuration} is not yet supported")
 
-    def get_data_table_profile(self, table_name: str = None, profile_name: str = None,
-                               schema_name: str = None) -> esdl.DataTableProfile:
+    def get_data_table_profile(self, profile_name: str = None, table_name: str = None,
+                               schema_name: str = None) -> DataTableProfile | list[DataTableProfile]:
         """Creates an esdl.DataTableProfile instance that refers to the data loaded in this ProfileManager
-        :param table_name: name of the table, if None the value of self.data_table_profile.tableName will be used
         :param profile_name: name of the profile (one of the columns retrieved from the database), if None all will be returned
+        :param table_name: name of the table, if None the value of self.data_table_profile.tableName will be used
         :param schema_name: name of the schema, if required. Defaults to None
         """
 
@@ -169,7 +171,7 @@ class DataTableProfileManager(ProfileManager):
         if table_name is None:
             table_name = self.data_table_profile.tableName
 
-        if self.num_profile_items == 1:
+        if profile_name: # return only one
             profile_name_index = self.get_profile_name_index(profile_name)
             profile_name = self.profile_header[profile_name_index]
 

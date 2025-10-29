@@ -26,7 +26,7 @@ def read_data_from_postgres():
     esdl_profiles = dtpm.get_data_table_profile()
     print(esdl_profiles)
     esdl_profile = dtpm.get_data_table_profile("E2A")
-    print(esdl_profiles.name, esdl_profile.columnName, qau_to_string(esdl_profile.profileQuantityAndUnit), esdl_profile.tableName)
+    print(esdl_profile.name, esdl_profile.columnName, qau_to_string(esdl_profile.profileQuantityAndUnit), esdl_profile.tableName)
 
 
 def write_data_to_postgres():
@@ -53,6 +53,6 @@ def write_data_to_postgres():
 
 if __name__ == '__main__':
     #esdl.profiles.data_configurations.postgresql.DEBUG_SQL = True
-    #write_data_to_postgres()
+    write_data_to_postgres()
     read_data_from_postgres()
 

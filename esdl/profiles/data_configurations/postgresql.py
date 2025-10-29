@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 from logging import warning, error
-from typing import Any, Optional, List
+from typing import Any, Optional, List, Tuple
 
 import psycopg
 from psycopg import Connection, sql
@@ -25,6 +25,10 @@ class DataTableMetaData:
 DEBUG_SQL = False
 
 class PostgresqlConfiguration:
+    """
+    Implementation of PostgreSQL configuration for DataTableProfile
+    DatabaseConfiguration(type=esdl.DatabaseTypeEnum.POSTGRESQL)
+    """
     connection: Optional[Connection]
     datatable_profile: esdl.DataTableProfile
 
@@ -71,9 +75,9 @@ class PostgresqlConfiguration:
         if self.connection:
             self.connection.close()
 
-    def load_data(self):
+    def load_data(self) -> Tuple[List[List[any]], List[str], List[DataTableMetaData]]:
         """
-        Returns a tuple of profile_values[[]], header[], List[DataTableMetaData]
+        Returns a tuple of profile_values[[]], header[], List[DataTableMetaData] with data loaded from Postgres
         """
         if not self.connection:
             raise Exception('PostgreSQL connection not established')
@@ -120,10 +124,10 @@ class PostgresqlConfiguration:
 
             return profile_values, header, metadata
 
-    def load_meta_data(self, column_name: str = None):
+    def load_meta_data(self, column_name: str = None) -> None | DataTableMetaData:
         """
-        Loads metadata from
-        :return:
+        Loads metadata from meta_data table
+        :return: configures
         """
         if not self.connection:
             raise Exception('PostgreSQL connection not established')
@@ -143,22 +147,27 @@ class PostgresqlConfiguration:
 
             if self.datatable_profile.columnName:
                 column_name = self.datatable_profile.columnName
-            cursor.execute(query, (self.datatable_profile.tableName, column_name))
-            result = cursor.fetchone()
-            if result:
-                result_dict = dict(zip(META_DATA_TABLE_COLUMNS, result))
-                if result_dict["unit"] or result_dict["physical_quantity"]:
-                    qau = build_qau_from_unit_string(result_dict["unit"], result_dict["physical_quantity"])
-                    if DEBUG_SQL:
-                        print(f'QaU metadata found: {result_dict["unit"]} in {result_dict["physical_quantity"]}')
-                    self.datatable_profile.profileQuantityAndUnit = qau
-                if result_dict["profile_name"]:
-                    self.datatable_profile.name = result_dict["profile_name"]
-                return DataTableMetaData(qau, result_dict["profile_name"])
-            else:
-                warning(f"No metadata found for table {table.as_string()} and column '{self.datatable_profile.columnName}'"
-                      f" in database '{self.datatable_profile.configuration.database}', cannot derive unit")
-                return None
+            try:
+                cursor.execute(query, (self.datatable_profile.tableName, column_name))
+                result = cursor.fetchone()
+                if result:
+                    result_dict = dict(zip(META_DATA_TABLE_COLUMNS, result))
+                    if result_dict["unit"] or result_dict["physical_quantity"]:
+                        qau = build_qau_from_unit_string(result_dict["unit"], result_dict["physical_quantity"])
+                        if DEBUG_SQL:
+                            print(f'QaU metadata found: {result_dict["unit"]} in {result_dict["physical_quantity"]}')
+                        self.datatable_profile.profileQuantityAndUnit = qau
+                    if result_dict["profile_name"]:
+                        self.datatable_profile.name = result_dict["profile_name"]
+                    return DataTableMetaData(qau, result_dict["profile_name"])
+                else:
+                    warning(f"No metadata found for table {table.as_string()} and column '{column_name or self.datatable_profile.columnName}'"
+                          f" in database '{self.datatable_profile.configuration.database}', cannot derive unit")
+                    return None
+            except Exception as e:
+                warning(
+                    f"No metadata found for table {table.as_string()} and column '{column_name or self.datatable_profile.columnName}'"
+                    f" in database '{self.datatable_profile.configuration.database}', cannot derive units")
 
 
 
