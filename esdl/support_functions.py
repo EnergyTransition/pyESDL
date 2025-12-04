@@ -23,6 +23,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
 # add support for shallow copying or cloning an object
 # it copies the object's attributes (e.g. clone an object), does only shallow copying
 def clone(self):
@@ -156,3 +157,9 @@ def deepcopy(self, memo=None, target_es=None):
                             v.eSet(ref.name, copy_value)
     copy._isset = InternalSet(self._isset)
     return copy
+
+
+setattr(EObject, '__copy__', clone)
+setattr(EObject, 'clone', clone)
+setattr(EObject, '__deepcopy__', deepcopy)
+setattr(EObject, 'deepcopy', deepcopy)

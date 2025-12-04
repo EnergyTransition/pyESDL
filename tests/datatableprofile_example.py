@@ -3,6 +3,9 @@ from pyecore.ecore import EEnum
 import esdl
 from esdl import DatabaseConfiguration
 from esdl.profiles.datatableprofilemanager import DataTableProfileManager, Credentials
+from esdl.support_functions import deepcopy
+from esdl.units.conversion import POWER_IN_kW, POWER_IN_MW, POWER_IN_W, convert_to_unit, equals
+from esdl.units.parser import qau_to_string
 
 if __name__ == '__main__':
 
@@ -18,6 +21,9 @@ if __name__ == '__main__':
     print(dtpman.get_esdl_timeseries_profile(columnName).values)
 
 
+    # add QaU
+    dtp.columnName = columnName
+    dtp.profileQuantityAndUnit = deepcopy(POWER_IN_kW)
     # store this in Postgres by creating a new configuration
     dtp.configuration = esdl.DatabaseConfiguration(type=esdl.DatabaseTypeEnum.POSTGRESQL,
                                                     id="my_database",
@@ -30,7 +36,7 @@ if __name__ == '__main__':
     dtpman.save(cred)
 
 
-
+    # load data from postgres
     dtp2 = esdl.DataTableProfile(name="test profile", id="test",
                                  columnName=columnName,
                                  tableName="test_profile",
@@ -46,8 +52,9 @@ if __name__ == '__main__':
 
 
 
-    # load an existing datatable profile in postgres from an ESDL
+    # load data from CSV into postgres from an ESDL DataTable profile definition
     dtp = esdl.DataTableProfile(name="test profile", id="test", tableName="csv_data_table")
+    dtp.profileQuantityAndUnit = POWER_IN_kW.deepcopy()
     dtp.configuration = esdl.FileConfiguration(uri="test_profile.csv", type=esdl.FileTypeEnum.CSV)
     dtpman = DataTableProfileManager.load(dtp)
     print(dtpman.profile_header)
@@ -59,5 +66,16 @@ if __name__ == '__main__':
     dtpman.add_credential(Credentials.create_dict("postgres_db", "drive", "password"))
     dtpman.save()
 
-    # save this to Excel or CSV
+
+    print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    # load the same data from postgres and check the unit
+    # setting the unit manually should not be needed.
+    my_dtp = esdl.DataTableProfile(name="my profile", id="test", tableName="csv_data_table",
+                                   columnName="column1", schema="essim_run_20250804")
+    my_dtp.configuration = esdl.DatabaseConfiguration(type=esdl.DatabaseTypeEnum.POSTGRESQL, name="test configuration",
+                                                   id="postgres_db", host="localhost", database="datatableprofile")
+    dtpmanager = DataTableProfileManager.load(my_dtp, Credentials.create_dict(my_dtp.configuration.id, "drive", "password"))
+    print(qau_to_string(dtp.profileQuantityAndUnit))
+    assert(equals(POWER_IN_kW, dtp.profileQuantityAndUnit))
+
 

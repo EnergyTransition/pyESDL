@@ -12,14 +12,15 @@
 #  Manager:
 #      TNO
 from os import environ
-from typing import Dict
+from typing import Dict, List, Any
 from uuid import uuid4
 
 from pyecore.ecore import EDate
 
 import esdl
+from esdl import DataTableProfile
 from esdl.profiles.data_configurations.credentials import Credentials
-from esdl.profiles.data_configurations.postgresql import PostgresqlConfiguration
+from esdl.profiles.data_configurations.postgresql import PostgresqlConfiguration, DataTableMetaData
 from esdl.profiles.excelprofilemanager import ExcelProfileManager
 from esdl.profiles.profilemanager import ProfileManager, ProfileType, NoProfileLoadedExecption
 
@@ -40,6 +41,7 @@ class DataTableProfileManager(ProfileManager):
     different ESDL profiles and to load/save to CSV
     """
     data_table_profile: esdl.DataTableProfile
+    metadata: List[DataTableMetaData]
 
     def __init__(self, data_table_profile: esdl.DataTableProfile = None, source_profile=None):
         """
@@ -49,6 +51,7 @@ class DataTableProfileManager(ProfileManager):
         :param source_profile: the source profile of which the data is copied into this profiles manager instance
         """
         super().__init__()
+        self.metadata = []
         self.profile_type = ProfileType.DATETIME_LIST
 
         if data_table_profile:
@@ -90,13 +93,14 @@ class DataTableProfileManager(ProfileManager):
         if configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
             # handle postgres
             postgres = PostgresqlConfiguration(self.data_table_profile, credentials_dict)
-            self.profile_data_list, self.profile_header = postgres.load_data()
+            self.profile_data_list, self.profile_header, self.metadata = postgres.load_data()
             postgres.disconnect()
-            self.num_profile_items = len(self.profile_data_list)
-            if self.num_profile_items > 0:
-                dt_index = self.get_profile_name_index(self.data_table_profile.datetimeColumnName)
-                self.start_datetime = self.profile_data_list[0][dt_index]
-                self.end_datetime = self.profile_data_list[-1][dt_index]
+            if len(self.profile_data_list) > 0:
+                self.num_profile_items = len(self.profile_data_list[0])
+                if self.num_profile_items > 0:
+                    dt_index = self.get_profile_name_index(self.data_table_profile.datetimeColumnName)
+                    self.start_datetime = self.profile_data_list[0][dt_index]
+                    self.end_datetime = self.profile_data_list[-1][dt_index]
         else:
             raise UnsupportedDataConfiguration(
                 f"DataConfiguration of type {configuration.type.name} is not yet supported")
@@ -110,7 +114,7 @@ class DataTableProfileManager(ProfileManager):
         FileConfiguration)
 
         Note:
-        - uri without extension is used as tableName for CSV files
+        - uri without extension is used as tableName for CSV files if no tableName is given
 
         :param data_table_profile: esdl.DataTableProfile that is used as an input profile
         :param credentials_dict: dictionary of credentials to use for authentication with ['id' -> Credentials] mapping,
@@ -140,7 +144,10 @@ class DataTableProfileManager(ProfileManager):
             elif configuration.type == esdl.FileTypeEnum.CSV:
                 dtpman = DataTableProfileManager(data_table_profile)
                 dtpman.load_csv(configuration.uri)
-                data_table_profile.tableName = configuration.uri.split('.')[0] if configuration.uri else "csv_file"
+                if not data_table_profile.tableName:
+                    data_table_profile.tableName = configuration.uri.split('.')[0] if configuration.uri else "csv_file"
+                    data_table_profile.tableName = data_table_profile.tableName.split('/')[-1]
+                    data_table_profile.tableName = data_table_profile.tableName.split('\\')[-1]
                 return dtpman
             else:
                 raise UnsupportedDataConfiguration(
@@ -149,46 +156,71 @@ class DataTableProfileManager(ProfileManager):
             raise UnsupportedDataConfiguration(
                 f"DataConfiguration {configuration} is not yet supported")
 
-    def get_data_table_profile(self, table_name: str, profile_name: str = None,
-                               schema_name: str = None) -> esdl.DataTableProfile:
+    def get_data_table_profile(self, profile_name: str = None, table_name: str = None,
+                               schema_name: str = None) -> DataTableProfile | list[DataTableProfile]:
         """Creates an esdl.DataTableProfile instance that refers to the data loaded in this ProfileManager
-        :param table_name: name of the table
-        :param profile_name: name of the profile (one of the columns retrieved from the database)
+        :param profile_name: name of the profile (one of the columns retrieved from the database), if None all will be returned
+        :param table_name: name of the table, if None the value of self.data_table_profile.tableName will be used
         :param schema_name: name of the schema, if required. Defaults to None
         """
 
         if len(self.profile_header) == 0:
             raise NoProfileLoadedExecption("No profile loaded, header is empty.")
-        profile_name_index = self.get_profile_name_index(profile_name)
-        profile_name = self.profile_header[profile_name_index]
+
         datetime_columnname = self.profile_header[0]
-        # TODO if data loaded with more columns: create a list
-        self.data_table_profile = esdl.DataTableProfile(
-            id=str(uuid4()),
-            name=profile_name,
-            table_name=table_name,
-            datetimeColumnName=datetime_columnname,
-            columnName=profile_name,
-            schema=schema_name,
-            startDate=EDate.from_string(self.start_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
-            endDate=EDate.from_string(self.end_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
-        )
+        if table_name is None:
+            table_name = self.data_table_profile.tableName
 
-        return self.data_table_profile
+        if profile_name: # return only one
+            profile_name_index = self.get_profile_name_index(profile_name)
+            profile_name = self.profile_header[profile_name_index]
 
-    def save_tags(self, table: str, column_names: list, schema: str = None, tags: dict = None):
-        """
-        Saves profile information to InfluxDB
+            self.data_table_profile = esdl.DataTableProfile(
+                id=str(uuid4()),
+                name=profile_name,
+                tableName=table_name,
+                datetimeColumnName=datetime_columnname,
+                columnName=profile_name,
+                schema=schema_name,
+                startDate=EDate.from_string(self.start_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
+                endDate=EDate.from_string(self.end_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
+            )
+            if self.metadata and self.metadata[profile_name_index]:
+                self.data_table_profile.profileQuantityAndUnit = self.metadata[profile_name_index].qau
+                self.data_table_profile.name = self.metadata[profile_name_index].name
+            return self.data_table_profile
+        else:
+            dtp_list = []
+            for i, column in enumerate(self.profile_header[1:], start=1):
+                dtp = esdl.DataTableProfile(
+                    id=str(uuid4()),
+                    name=profile_name,
+                    tableName=table_name,
+                    datetimeColumnName=datetime_columnname,
+                    columnName=column,
+                    schema=schema_name,
+                    startDate=EDate.from_string(self.start_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
+                    endDate=EDate.from_string(self.end_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
+                )
+                dtp_list.append(dtp)
+                if self.metadata and self.metadata[i]:
+                    dtp.profileQuantityAndUnit = self.metadata[i].qau
+                    dtp.name = self.metadata[i].name
+            return dtp_list
 
-        :param table: name of the table where the data must be written to. Table is created when not existing
-        :param column_names: list of the columns that should be written
-        :param tags: dictionary with tags and tag values, that should be used when writing this data in a JSON column
-                    in the database
-        :param schema: name of the schema, if required.
-        :return: an esdl.DataTableProfile instance or a list of esdl.DataTableProfile instances in case multiple fields
-                 were specified, with proper references to the data in the database
-        """
-        pass
+    # def save_tags(self, table: str, column_names: list, schema: str = None, tags: dict = None):
+    #     """
+    #     Saves profile information to InfluxDB
+    #
+    #     :param table: name of the table where the data must be written to. Table is created when not existing
+    #     :param column_names: list of the columns that should be written
+    #     :param tags: dictionary with tags and tag values, that should be used when writing this data in a JSON column
+    #                 in the database
+    #     :param schema: name of the schema, if required.
+    #     :return: an esdl.DataTableProfile instance or a list of esdl.DataTableProfile instances in case multiple fields
+    #              were specified, with proper references to the data in the database
+    #     """
+    #     pass
 
     def save(self, credentials_dict: dict[str, Credentials] = None):
         """
@@ -210,19 +242,13 @@ class DataTableProfileManager(ProfileManager):
 
 
 class NoDataException(Exception):
-    """Thrown when no profile data can be written to InfluxDB"""
+    """Thrown when no profile data can be written to Postgres"""
     pass
 
 
 class WrongFilterFormatException(Exception):
     """Thrown when filter specification in ESDL profile cannot be parsed"""
     pass
-
-
-class WrongTagsFormatException(Exception):
-    """Thrown when the tags parameter has the wrong structure"""
-    pass
-
 
 class InvalidDataConfiguration(Exception):
     """Thrown when there is no or invalid DataConfiguration"""
