@@ -263,7 +263,7 @@ def get_or_create_global_qau_reference(es: esdl.EnergySystem, orig_qau: esdl.Qua
     qau_ref = None
     for qau in qaus.quantityAndUnit:
         if equals(qau, orig_qau):
-            qau_ref = esdl.QuantityAndUnitReference(reference=qau)
+            qau_ref = esdl.QuantityAndUnitReference(id=str(uuid.uuid4()), reference=qau)
 
     if not qau_ref:
         new_qau = orig_qau.deepcopy()
@@ -271,6 +271,6 @@ def get_or_create_global_qau_reference(es: esdl.EnergySystem, orig_qau: esdl.Qua
             new_qau.id = str(uuid.uuid4())     # If the orig_qau had an UUID as ID, change it
 
         qaus.quantityAndUnit.append(new_qau)
-        qau_ref = esdl.QuantityAndUnitReference(reference=new_qau)
+        qau_ref = esdl.QuantityAndUnitReference(id=str(uuid.uuid4()), reference=new_qau)
 
     return qau_ref
