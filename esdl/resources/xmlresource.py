@@ -152,6 +152,7 @@ class XMLResource(XMIResource):
                 continue  # we skip the name for metamodel import
             if feature.is_attribute:
 
+                # Check if there is a relevant mapping for ESDL EEnums
                 if isinstance(feature.eType, EEnum):
                     feature, value = self.version_migration.check_enum_migration_mappings(feature, value)
 
@@ -168,9 +169,6 @@ class XMLResource(XMIResource):
     an unknown attribute is found for a class. This version prints a warning and continues.
     """
     def _decode_attribute(self, owner, key, value, node):
-
-        print("decode attribute: ", owner, key, value, node)
-
         namespace, att_name = self.extract_namespace(key)
         prefix = self.reverse_nsmap[namespace] if namespace else None
         # This is a special case, we are working with uuids
