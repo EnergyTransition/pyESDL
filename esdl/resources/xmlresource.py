@@ -101,6 +101,10 @@ class XMLResource(XMIResource):
             return (feature_container, proxy, [], [], False)
         if self._type_attribute(node):
             prefix, _type = self._type_attribute(node).split(':')
+
+            # Check if there is a relevant mapping for the ESDL EClass
+            _type = self.version_migration.check_class_migration_mappings(_type)
+
             if not prefix:
                 raise ValueError(f'Prefix {prefix} is not registered, '
                                  f'{node.tag} line {node.sourceline}')
@@ -189,7 +193,7 @@ class XMLResource(XMIResource):
                 #                 f'type {owner.eClass.name} '
                 #                 f'({node.tag} line {node.sourceline})')
 
-                alternative_att_name = self.version_migration.get_replaced_attribute_name(owner.eClass.name, att_name)
+                alternative_att_name = self.version_migration.check_attribute_migration_mappings(owner.eClass.name, att_name)
                 if alternative_att_name:
                     feature = self._find_feature(owner.eClass, alternative_att_name)
 

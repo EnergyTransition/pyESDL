@@ -17,8 +17,7 @@ import json
 
 import esdl
 from esdl.esdl_handler import EnergySystemHandler
-from esdl.version_migrations.mapping import MappingList, RenameAttribute, RenameClass, RemoveReasignClass, \
-    RemoveReassignEnumValue
+from esdl.version_migrations.mapping import MappingList, RenameAttribute, RenameClass, RemoveReassignEnumValue
 from esdl.version_migrations.migration import VersionMigration
 
 
@@ -44,15 +43,15 @@ class TestVersionMigration(unittest.TestCase):
             {
                 "id": "2",
                 "type": "RENAME_CLASS",
-                "class_name": "",
-                "class_new_name": "",
+                "class_name": "GeothermalSourceOld",
+                "class_new_name": "GeothermalSource",
             },
-            {
-                "id": "3",
-                "type": "REMOVE_CLASS_AND_REASSIGN",
-                "class_name": "PVPanel",
-                "class_to_reassign": "PVInstallation"
-            },
+            # {
+            #     "id": "3",
+            #     "type": "REMOVE_CLASS_AND_REASSIGN",
+            #     "class_name": "PVPanel",
+            #     "class_to_reassign": "PVInstallation"
+            # },
             {
                 "id": "4",
                 "type": "REMOVE_AND_REPLACE_ENUM_VALUE",
@@ -65,10 +64,6 @@ class TestVersionMigration(unittest.TestCase):
         with open("version_migration_mappings.json", "w") as file:
             json.dump(mappings, file)
 
-    def test_parse_version_migrations_mappings_file(self):
-        vm = VersionMigration()
-        print(vm.get_mappings())
-
     def test_parsing_esdl(self):
         esh = EnergySystemHandler()
         esh.load_file("test_esdl_with_deprecated_attribute.esdl")
@@ -79,6 +74,8 @@ class TestVersionMigration(unittest.TestCase):
         area = es.instance[0].area
         asset = area.asset[0]
         if isinstance(asset, esdl.GeothermalSource):
+            print(asset.eClass.name)
+            self.assertEqual(asset.eClass.name, "GeothermalSource")
             print(asset.flowRate)
             self.assertEqual(asset.flowRate, 3.0)
             print(asset.port[0].profile[0].profileQuantityAndUnit.multiplier)

@@ -6,7 +6,7 @@ from typing import List
 class MappingTypeEnum(str, Enum):
     RENAME_ATTRIBUTE = "RENAME_ATTRIBUTE"
     RENAME_CLASS = "RENAME_CLASS"
-    REMOVE_CLASS_AND_REASSIGN = "REMOVE_CLASS_AND_REASSIGN"
+    # REMOVE_CLASS_AND_REASSIGN = "REMOVE_CLASS_AND_REASSIGN"
     REMOVE_AND_REPLACE_ENUM_VALUE = "REMOVE_AND_REPLACE_ENUM_VALUE"
 
 
@@ -29,10 +29,10 @@ class RenameClass(Mapping):
     class_new_name: str
 
 
-@dataclass
-class RemoveReasignClass(Mapping):
-    class_name: str
-    class_to_reassign: str
+# @dataclass
+# class RemoveReasignClass(Mapping):
+#     class_name: str
+#     class_to_reassign: str
 
 
 @dataclass
