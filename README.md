@@ -114,6 +114,9 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 ## Changes
 
+## Version 26.2
+- Add support for ESDL release 26.2
+
 ## Version 25.12
 - Add functions to create QuantityAndUnit objects
 - Add unit conversion from gram to tonne and vice versa (e.g. kg to Mt)
