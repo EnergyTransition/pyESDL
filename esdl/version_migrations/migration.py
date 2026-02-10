@@ -1,5 +1,6 @@
 import json
-from esdl.version_migrations.mapping import MappingList, RenameAttribute, RenameClass, RemoveReassignEnumValue
+from esdl.version_migrations.mapping import MappingList, RenameAttribute, RenameClass, RemoveReassignEnumValue, \
+    MappingTypeEnum
 
 
 class VersionMigration:
@@ -22,16 +23,16 @@ class VersionMigration:
             mappings = json.load(f)
 
             for mapping in mappings:
-                if mapping["type"] == "RENAME_ATTRIBUTE":
+                if mapping["type"] == MappingTypeEnum.RENAME_ATTRIBUTE:
                     m = RenameAttribute(**mapping)
                     self.append_or_add(self.attribute_mappings, mapping["class_name"], m)
-                elif mapping["type"] == "RENAME_CLASS":
+                elif mapping["type"] == MappingTypeEnum.RENAME_CLASS:
                     m = RenameClass(**mapping)
                     self.append_or_add(self.class_mappings, mapping["class_name"], m)
-                # elif mapping["type"] == "REMOVE_CLASS_AND_REASSIGN":
+                # elif mapping["type"] == MappingTypeEnum.REMOVE_CLASS_AND_REASSIGN:
                 #     m = RemoveReasignClass(**mapping)
                 #     self.append_or_add(self.class_mappings, mapping["class_name"], m)
-                elif mapping["type"] == "REMOVE_AND_REPLACE_ENUM_VALUE":
+                elif mapping["type"] == MappingTypeEnum.REMOVE_AND_REPLACE_ENUM_VALUE:
                     m = RemoveReassignEnumValue(**mapping)
                     self.append_or_add(self.enum_mappings, mapping["enum_name"], m)
 

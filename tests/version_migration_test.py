@@ -34,13 +34,6 @@ class TestVersionMigration(unittest.TestCase):
                 "attribute_new_name": "maximumFlowRate"
             },
             {
-                "id": "1b",             # To test the mechanism without changing ESDL
-                "type": "RENAME_ATTRIBUTE",
-                "class_name": "GeothermalSource",
-                "attribute_name": "maximumFlowRate",
-                "attribute_new_name": "flowRate"
-            },
-            {
                 "id": "2",
                 "type": "RENAME_CLASS",
                 "class_name": "GeothermalSourceOld",
@@ -62,7 +55,7 @@ class TestVersionMigration(unittest.TestCase):
         ]
 
         with open("version_migration_mappings.json", "w") as file:
-            json.dump(mappings, file)
+            json.dump(mappings, file, indent=4)
 
     def test_parsing_esdl(self):
         esh = EnergySystemHandler()
@@ -76,7 +69,7 @@ class TestVersionMigration(unittest.TestCase):
         if isinstance(asset, esdl.GeothermalSource):
             print(asset.eClass.name)
             self.assertEqual(asset.eClass.name, "GeothermalSource")
-            print(asset.flowRate)
-            self.assertEqual(asset.flowRate, 3.0)
+            print(asset.maximumFlowRate)
+            self.assertEqual(asset.maximumFlowRate, 3.0)
             print(asset.port[0].profile[0].profileQuantityAndUnit.multiplier)
             self.assertEqual(asset.port[0].profile[0].profileQuantityAndUnit.multiplier, esdl.MultiplierEnum.TERA)
