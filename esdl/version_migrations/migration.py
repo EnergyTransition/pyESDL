@@ -1,6 +1,7 @@
 import json
 from esdl.version_migrations.mapping import MappingList, RenameAttribute, RenameClass, RemoveReassignEnumValue, \
     MappingTypeEnum
+from esdl.version_migrations.version_migration_mappings import version_migration_mappings
 
 
 class VersionMigration:
@@ -10,7 +11,8 @@ class VersionMigration:
         self.attribute_mappings = dict()     # EClass --> list[Mapping]
         self.enum_mappings = dict()          # Enum --> list[Mapping]
 
-        self.load_version_migration_mappings("./version_migration_mappings.json")
+        self.mappings = version_migration_mappings
+        self.process_mappings()
 
     def append_or_add(self, dictionary, key, value):
         if key in dictionary:
@@ -18,23 +20,20 @@ class VersionMigration:
         else:
             dictionary[key] = [value]
 
-    def load_version_migration_mappings(self, file_path):
-        with open(file_path, 'r') as f:
-            mappings = json.load(f)
-
-            for mapping in mappings:
-                if mapping["type"] == MappingTypeEnum.RENAME_ATTRIBUTE:
-                    m = RenameAttribute(**mapping)
-                    self.append_or_add(self.attribute_mappings, mapping["class_name"], m)
-                elif mapping["type"] == MappingTypeEnum.RENAME_CLASS:
-                    m = RenameClass(**mapping)
-                    self.append_or_add(self.class_mappings, mapping["class_name"], m)
-                # elif mapping["type"] == MappingTypeEnum.REMOVE_CLASS_AND_REASSIGN:
-                #     m = RemoveReasignClass(**mapping)
-                #     self.append_or_add(self.class_mappings, mapping["class_name"], m)
-                elif mapping["type"] == MappingTypeEnum.REMOVE_AND_REPLACE_ENUM_VALUE:
-                    m = RemoveReassignEnumValue(**mapping)
-                    self.append_or_add(self.enum_mappings, mapping["enum_name"], m)
+    def process_mappings(self):
+        for mapping in self.mappings:
+            if mapping["type"] == MappingTypeEnum.RENAME_ATTRIBUTE:
+                m = RenameAttribute(**mapping)
+                self.append_or_add(self.attribute_mappings, mapping["class_name"], m)
+            elif mapping["type"] == MappingTypeEnum.RENAME_CLASS:
+                m = RenameClass(**mapping)
+                self.append_or_add(self.class_mappings, mapping["class_name"], m)
+            # elif mapping["type"] == MappingTypeEnum.REMOVE_CLASS_AND_REASSIGN:
+            #     m = RemoveReasignClass(**mapping)
+            #     self.append_or_add(self.class_mappings, mapping["class_name"], m)
+            elif mapping["type"] == MappingTypeEnum.REMOVE_AND_REPLACE_ENUM_VALUE:
+                m = RemoveReassignEnumValue(**mapping)
+                self.append_or_add(self.enum_mappings, mapping["enum_name"], m)
 
     def check_attribute_migration_mappings(self, class_name, attribute_name):
         if class_name in self.attribute_mappings:

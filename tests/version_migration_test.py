@@ -23,43 +23,9 @@ from esdl.version_migrations.migration import VersionMigration
 
 class TestVersionMigration(unittest.TestCase):
 
-    def test_create_version_migrations_mappings_file(self):
-
-        mappings = [
-            {
-                "id": "1",
-                "type": "RENAME_ATTRIBUTE",
-                "class_name": "GeothermalSource",
-                "attribute_name": "flowRate",
-                "attribute_new_name": "maximumFlowRate"
-            },
-            {
-                "id": "2",
-                "type": "RENAME_CLASS",
-                "class_name": "GeothermalSourceOld",
-                "class_new_name": "GeothermalSource",
-            },
-            # {
-            #     "id": "3",
-            #     "type": "REMOVE_CLASS_AND_REASSIGN",
-            #     "class_name": "PVPanel",
-            #     "class_to_reassign": "PVInstallation"
-            # },
-            {
-                "id": "4",
-                "type": "REMOVE_AND_REPLACE_ENUM_VALUE",
-                "enum_name": "MultiplierEnum",
-                "enum_value_name": "TERRA",
-                "enum_value_to_reassign": "TERA"
-            }
-        ]
-
-        with open("version_migration_mappings.json", "w") as file:
-            json.dump(mappings, file, indent=4)
-
     def test_parsing_esdl(self):
         esh = EnergySystemHandler()
-        esh.load_file("test_esdl_with_deprecated_attribute.esdl")
+        esh.load_file("tests/test_esdl_with_deprecated_attribute.esdl")
 
         es = esh.get_energy_system()
         print(es)
