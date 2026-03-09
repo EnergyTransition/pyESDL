@@ -13,12 +13,8 @@
 #      TNO
 import unittest
 
-import json
-
 import esdl
 from esdl.esdl_handler import EnergySystemHandler
-from esdl.version_migrations.mapping import MappingList, RenameAttribute, RenameClass, RemoveReassignEnumValue
-from esdl.version_migrations.migration import VersionMigration
 
 
 class TestVersionMigration(unittest.TestCase):

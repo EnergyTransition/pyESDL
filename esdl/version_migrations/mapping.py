@@ -1,30 +1,21 @@
 from dataclasses import dataclass
-from enum import Enum
 from typing import List
 
 
-class MappingTypeEnum(str, Enum):
-    RENAME_ATTRIBUTE = "RENAME_ATTRIBUTE"
-    RENAME_CLASS = "RENAME_CLASS"
-    # REMOVE_CLASS_AND_REASSIGN = "REMOVE_CLASS_AND_REASSIGN"
-    REMOVE_AND_REPLACE_ENUM_VALUE = "REMOVE_AND_REPLACE_ENUM_VALUE"
-
-
 @dataclass
-class Mapping:
+class ESDLVesionMapping:
     id: str
-    type: MappingTypeEnum
 
 
 @dataclass
-class RenameAttribute(Mapping):
+class RenameAttribute(ESDLVesionMapping):
     class_name: str
     attribute_name: str
     attribute_new_name: str
 
 
 @dataclass
-class RenameClass(Mapping):
+class RenameClass(ESDLVesionMapping):
     class_name: str
     class_new_name: str
 
@@ -36,7 +27,7 @@ class RenameClass(Mapping):
 
 
 @dataclass
-class RemoveReassignEnumValue(Mapping):
+class RemoveReassignEnumValue(ESDLVesionMapping):
     enum_name: str
     enum_value_name: str
     enum_value_to_reassign: str
@@ -44,4 +35,4 @@ class RemoveReassignEnumValue(Mapping):
 
 @dataclass
 class MappingList:
-    mappings: List[Mapping]
+    mappings: List[ESDLVesionMapping]
