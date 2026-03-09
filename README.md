@@ -114,6 +114,9 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 ## Changes
 
+## Version 26.3
+- Add support for ESDL release 26.3
+
 ## Version 26.2
 - Add support for ESDL release 26.2
 
