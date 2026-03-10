@@ -14,11 +14,11 @@
 
 import unittest
 
-from esdl import esdl
+from esdl import esdl, support_functions        # Keep the support_functions, it attaches the copy/deepcopy to EObjects
 from esdl.ecore_documentation import EcoreDocumentation
 from esdl.units.conversion import get_attribute_unit, convert_to_unit, POWER_IN_W, POWER_IN_GW, ENERGY_IN_J, \
     ENERGY_IN_MWh
-from esdl.units.parser import build_qau_from_unit_string, qau_to_string
+from esdl.units.parser import build_qau_from_unit_string, qau_to_string, get_or_create_global_qau_reference
 
 
 class ESDLUnitTest(unittest.TestCase):
@@ -28,6 +28,7 @@ class ESDLUnitTest(unittest.TestCase):
         version = doc.get_esdl_version()
         print('ESDL version', version)
         self.assertEqual(version[0], "v")
+
     def test_pyESDL_version(self):
         from esdl import _version
         version = _version.get_versions()['version']
@@ -54,6 +55,12 @@ class ESDLUnitTest(unittest.TestCase):
 
         converted = convert_to_unit(5, ENERGY_IN_MWh, ENERGY_IN_J)
         self.assertEqual(18E9, converted)
+
+    def test_create_qau(self):
+        es = esdl.EnergySystem()
+        ref = get_or_create_global_qau_reference(es, ENERGY_IN_MWh)
+        self.assertEqual(ref.eClass.name, "QuantityAndUnitReference")
+        self.assertEqual(len(es.energySystemInformation.quantityAndUnits.quantityAndUnit), 1)
 
     def test_unit_parser(self):
         unit = build_qau_from_unit_string("TWh")

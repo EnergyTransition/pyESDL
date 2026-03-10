@@ -11,10 +11,10 @@
 #      TNO         - Initial implementation
 #  Manager:
 #      TNO
-
 import uuid
 
 from esdl import esdl
+from esdl.units.conversion import equals
 
 unitdict = {
     'NONE': '-',
@@ -201,3 +201,75 @@ def build_qau_from_unit_string(unit_string: str, physical_quantity = None):
 
     return qau
 
+
+def is_valid_uuid(uuid_to_test, version=4):
+    """
+    Check if uuid_to_test is a valid UUID.
+
+    Parameters
+    ----------
+    uuid_to_test : str
+    version : {1, 2, 3, 4}
+
+    Returns
+    -------
+    `True` if uuid_to_test is a valid UUID, otherwise `False`.
+
+    Examples
+    --------
+    >>> is_valid_uuid('c9bf9e57-1685-4c89-bafb-ff5af830be8a')
+    True
+    >>> is_valid_uuid('c9bf9e58')
+    False
+    """
+
+    try:
+        uuid_obj = uuid.UUID(uuid_to_test, version=version)
+    except ValueError:
+        return False
+    return str(uuid_obj) == uuid_to_test
+
+
+def instantiate_qau(orig_qau: esdl.QuantityAndUnitType):
+    """
+    Creates a new instance of a QuantityAndUnit instance by copying the contents and creating a new ID.
+
+    :param orig_qau: an esdl.QuantityAndUnit instance used as template
+    """
+    qau = orig_qau.deepcopy()
+    qau.id = str(uuid.uuid4())
+    return qau
+
+
+def get_or_create_global_qau_reference(es: esdl.EnergySystem, orig_qau: esdl.QuantityAndUnitType):
+    """
+    Finds a QuantityAndUnit instance in the global list of QuantityAndUnit instances in the EnergySystemInformation.
+    It the QuantityAndUnit exists, a QuantityAndUnitReference is returned. If the QuantityAndUnit does not exist,
+    it will be created and a QuantityAndUnitReference is returned. Must be used with the default QuantityAndUnits, like
+    defined in conversion.py, like ENERGY_IN_PJ, COST_IN_MEur
+
+    :param es: the EnergySystem instance
+    :param orig_qau: a QuantityAndUnit instance from the list of QuantityAndUnit templates
+    """
+    esi = es.energySystemInformation
+    if not esi:
+        esi = es.energySystemInformation = esdl.EnergySystemInformation()
+
+    qaus = esi.quantityAndUnits
+    if not qaus:
+        qaus = esi.quantityAndUnits = esdl.QuantityAndUnits(id=str(uuid.uuid4()), name="Global quantities and units")
+
+    qau_ref = None
+    for qau in qaus.quantityAndUnit:
+        if equals(qau, orig_qau):
+            qau_ref = esdl.QuantityAndUnitReference(reference=qau)
+
+    if not qau_ref:
+        new_qau = orig_qau.deepcopy()
+        if is_valid_uuid(new_qau.id, 4):
+            new_qau.id = str(uuid.uuid4())     # If the orig_qau had an UUID as ID, change it
+
+        qaus.quantityAndUnit.append(new_qau)
+        qau_ref = esdl.QuantityAndUnitReference(reference=new_qau)
+
+    return qau_ref
