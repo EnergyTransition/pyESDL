@@ -13,9 +13,8 @@
 #      TNO
 
 import uuid
-from typing import Union
 
-from esdl import esdl, PhysicalQuantityEnum
+from esdl import esdl
 
 unitdict = {
     'NONE': '-',

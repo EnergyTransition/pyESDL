@@ -7,6 +7,8 @@ from esdl.support_functions import deepcopy
 from esdl.units.conversion import POWER_IN_kW, POWER_IN_MW, POWER_IN_W, convert_to_unit, equals
 from esdl.units.parser import qau_to_string
 
+esdl.profiles.data_configurations.postgresql.DEBUG_SQL = True # does not work
+
 if __name__ == '__main__':
 
     # create a new datatable profile with data from e.g. excel or csv

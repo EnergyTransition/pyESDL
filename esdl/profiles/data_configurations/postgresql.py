@@ -1,7 +1,8 @@
 import logging
 from dataclasses import dataclass
 from logging import warning, error
-from typing import Any, Optional, List, Tuple
+from typing import Any, Optional, List, Tuple, Dict
+import re
 
 import psycopg
 from psycopg import Connection, sql
@@ -16,13 +17,13 @@ META_DATA_TABLE_COLUMNS = ["table_name", "column_name",  "physical_quantity", "u
 META_DATA_TABLE_COLUMN_LENGTH = [64, 64, 32, 32, 255]  # VARCHAR lengths
 META_DATA_TABLE_NOT_NULL = [True, True, False, False, False]
 
+# set to True to enable debugging of SQL statements
+DEBUG_SQL = False
+
 @dataclass
 class DataTableMetaData:
     qau: Optional[QuantityAndUnitType]
     name: Optional[str]
-
-# set to True to enable debugging of SQL statements
-DEBUG_SQL = False
 
 class PostgresqlConfiguration:
     """
@@ -75,9 +76,12 @@ class PostgresqlConfiguration:
         if self.connection:
             self.connection.close()
 
-    def load_data(self) -> Tuple[List[List[any]], List[str], List[DataTableMetaData]]:
+    def load_data(self, additional_filters: Dict[str, Any] = None, column_based:bool = False) -> Tuple[List[List[any]], List[str], List[DataTableMetaData]]:
         """
-        Returns a tuple of profile_values[[]], header[], List[DataTableMetaData] with data loaded from Postgres
+        :param additional_filters: (key,value) set of additional filters for the query in the WHERE clause
+        :param column_based if True, data is returned by column instead of row
+        :return a tuple of profile_values[[]], header[], List[DataTableMetaData] with data loaded from Postgres.
+        the datetime column is always returned as first column
         """
         if not self.connection:
             raise Exception('PostgreSQL connection not established')
@@ -87,36 +91,118 @@ class PostgresqlConfiguration:
 
         with self.connection.cursor() as cursor:
             if self.datatable_profile.schema:
-                table = self.datatable_profile.schema + "." + self.datatable_profile.tableName
+                table_ident = sql.Identifier(self.datatable_profile.schema, self.datatable_profile.tableName)
             else:
-                table = self.datatable_profile.tableName
+                table_ident = sql.Identifier(self.datatable_profile.tableName)
 
-            # warning: this is unquoted SQL...
+            dt_ident = sql.Identifier(self.datatable_profile.datetimeColumnName)
+            # column is None if we want to query all columns
+            col_ident = sql.Identifier(self.datatable_profile.columnName) if self.datatable_profile.columnName else None
+
+            # Collect WHERE clauses
+            where_clauses = []
+            params = []
+            if self.datatable_profile.startDate and self.datatable_profile.endDate:
+                where_clauses.append(sql.SQL("{dt} >= %s").format(dt=dt_ident))
+                where_clauses.append(sql.SQL("{dt} <= %s").format(dt=dt_ident))
+                params.extend([
+                    self.datatable_profile.startDate.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    self.datatable_profile.endDate.strftime('%Y-%m-%dT%H:%M:%SZ')
+                ])
+
+            bucket_seconds = None
+
+            # NOTE: The filter string parsing here does not yet support 'OR' or more complex filtering.
             if self.datatable_profile.filter:
-                where = f"WHERE {self.datatable_profile.filter}"
+                """
+                Parse a filter string like:
+                "col"='a' AND "colB"=50
+                into: [('col', 'a', ''), ('colB', '', '50')]
+                """
+                pattern = r'"?(\w+)"?\s*=\s*(?:\'([^\']*)\'|(\d+))'
+                matches = re.findall(pattern, self.datatable_profile.filter)
+
+                # todo: refactor to use additional_filters
+                if not matches:
+                    logging.error(f"Failed to parse filter string: {self.datatable_profile.filter}")
+                for col, str_val, num_val in matches:
+                    value = str_val if str_val else float(num_val)
+                    if col == "groupby_interval_sec":
+                        bucket_seconds = value
+                    else:
+                        where_clauses.append(sql.SQL("{tag} = %s").format(tag=sql.Identifier(col)))
+                        params.append(value)
+
+            if where_clauses:
+                where_sql = sql.SQL(" WHERE ") + sql.SQL(" AND ").join(where_clauses)
             else:
-                where = ""
+                where_sql = sql.SQL("")
+
+            # Downsampled query by grouping them into fixed-size buckets.
+            if bucket_seconds:
+                query = sql.SQL("""
+                    SELECT
+                        to_timestamp(
+                            floor(extract(epoch from {dt}) / %s) * %s
+                        )::timestamp AS {dt},
+                        AVG({col}) AS {col}
+                    FROM {tbl}
+                    {where}
+                    GROUP BY 1
+                    ORDER BY 1
+                """).format(
+                    dt=dt_ident,
+                    col=col_ident,
+                    tbl=table_ident,
+                    where=where_sql
+                )
+                params = [bucket_seconds, bucket_seconds, *params]
+                if DEBUG_SQL:
+                    print(query.as_string(cursor))
+            # Normal query
+            else:
+                query = sql.SQL("SELECT {dt}, {col} FROM {tbl} {where}").format(
+                    dt=dt_ident,
+                    col=col_ident,
+                    tbl=table_ident,
+                    where=where_sql
+                )
 
             if self.datatable_profile.columnName:
-                # todo make this safe SQL
-                cursor.execute(f'SELECT '
-                               f'{self.datatable_profile.datetimeColumnName},{self.datatable_profile.columnName} '
-                               f'FROM {table} {where};')
+                # print(query.as_string(cursor), params)
+                if DEBUG_SQL:
+                    print(query.as_string(cursor))
+                cursor.execute(query, params)
             else:
-                cursor.execute(f'SELECT * FROM {table} {where};')
+                # Fallback to select all columns
+                query = sql.SQL("SELECT * FROM {tbl}").format(tbl=table_ident)
+                if DEBUG_SQL:
+                    print(query.as_string(cursor))
+                cursor.execute(query)
             result = cursor.fetchall()
             # process results
             columns = cursor.description
             column_names = [c.name for c in columns]
-            datetime_column_index = [c.type_display for c in columns].index('timestamp')
+            try:
+                datetime_column_index = column_names.index(self.datatable_profile.datetimeColumnName)
+                #datetime_column_index = [c.type_display for c in columns].index('timestamp')
+            except ValueError:
+                datetime_column_index = 0 # assume first column is datetime column
             dt_colum = column_names.pop(datetime_column_index)
-            header = [dt_colum, *column_names]
+            header = [dt_colum, *column_names] # make sure date time column is first in list.
 
             profile_values = []
+            if column_based:
+                profile_values = [[] for _ in range(len(header))]
             for row in result:
                 copy = list(row)
-                datetime = copy.pop(datetime_column_index)
-                profile_values.append([datetime, *copy])
+                datetime = copy.pop(datetime_column_index) # insert datetime as first column
+                ordered_row_data = [datetime, *copy]
+                if not column_based:
+                    profile_values.append(ordered_row_data)
+                else:
+                    for i in range(len(column_names)):
+                        profile_values[i].append(ordered_row_data[i])
             metadata: List[DataTableMetaData] = []
             for c in [dt_colum, *column_names]:
                 dtmd = self.load_meta_data(c)
@@ -155,7 +241,7 @@ class PostgresqlConfiguration:
                     if result_dict["unit"] or result_dict["physical_quantity"]:
                         qau = build_qau_from_unit_string(result_dict["unit"], result_dict["physical_quantity"])
                         if DEBUG_SQL:
-                            print(f'QaU metadata found: {result_dict["unit"]} in {result_dict["physical_quantity"]}')
+                            print(f'QaU metadata found: {result_dict["physical_quantity"]} in {result_dict["unit"]}')
                         self.datatable_profile.profileQuantityAndUnit = qau
                     if result_dict["profile_name"]:
                         self.datatable_profile.name = result_dict["profile_name"]
@@ -170,12 +256,12 @@ class PostgresqlConfiguration:
                     f" in database '{self.datatable_profile.configuration.database}', cannot derive units")
 
 
-
-    def save_data(self, profile_values: List[List[Any]], header: List[str]):
+    def save_data(self, profile_values: List[List[Any]], header: List[str], overwrite: bool = True):
         """
         Saves data to Postgres. It will insert all the columns in the profile_values by default.
         :param profile_values:
         :param header:
+        :param overwrite: If True, truncate the existing table rows and insert new ones.
         :return:
         """
         if not self.connection:
@@ -197,23 +283,35 @@ class PostgresqlConfiguration:
             except ValueError as e:
                 logging.error(f"Cannot find datetime column '{self.datatable_profile.datetimeColumnName}' in dataset, ")
                 logging.error(f"configure using esdl.DataTableProfile.datetimeColumnName")
-                exit(1)
+                raise e
             insert_columns = [f'"{c}" DOUBLE PRECISION' for c in non_datetime_columns]
             insert_columns.insert(0, f'"{self.datatable_profile.datetimeColumnName}" TIMESTAMP')
             insert_column_statement = ",\n".join(insert_columns)
+
             # create schema and table if not exists
             if self.datatable_profile.schema:
                 query = sql.SQL('CREATE SCHEMA IF NOT EXISTS {schema}').format(schema=sql.Identifier(self.datatable_profile.schema))
                 if DEBUG_SQL:
                     print(query.as_string(cursor))
                 cursor.execute(query)
-            sql_string = f"CREATE TABLE IF NOT EXISTS " + "{table}" + f" ({insert_column_statement})"
+
+            sql_string = "CREATE TABLE IF NOT EXISTS {table}" + f" ({insert_column_statement})"
             query = sql.SQL(sql_string).format(table=table)
             if DEBUG_SQL:
                 print(query.as_string(cursor))
             cursor.execute(query)
+            # create index on datetime column
+            # CREATE INDEX events_timestamp_idx ON public.events USING btree ("timestamp");
+            sql_string = r'CREATE INDEX IF NOT EXISTS metadata_datetime_idx ON {table} USING btree ({column_name})'
+            query = sql.SQL(sql_string).format(table=table, column_name=sql.Identifier(self.datatable_profile.datetimeColumnName))
+            cursor.execute(query)
             self.connection.commit()
 
+            if overwrite:
+                query = sql.SQL('TRUNCATE TABLE {table}').format(table=table)
+                if DEBUG_SQL:
+                    print(query.as_string(cursor))
+                cursor.execute(query)
 
             columns = sql.SQL(', ').join(sql.Identifier(h) for h in header)
             query = sql.SQL("COPY {table} ({columns}) FROM STDIN").format(table=table, columns=columns)
@@ -241,8 +339,7 @@ class PostgresqlConfiguration:
         :return: None
         """
         qau = datatable_profile.profileQuantityAndUnit
-        if qau is None or qau.unit is None or qau.unit == esdl.UnitEnum.NONE or \
-            qau.physicalQuantity is None or qau.physicalQuantity is esdl.PhysicalQuantityEnum.UNDEFINED:
+        if qau is None or qau.unit is None or qau.physicalQuantity is None:
             raise InvalidDataTableProfile(f"Missing Quantity and unit information for DataTableProfile with id={datatable_profile.id}")
         if column_name == datatable_profile.datetimeColumnName:
             qau = QuantityAndUnitType(id="time", unit=esdl.UnitEnum.NONE, physicalQuantity=esdl.PhysicalQuantityEnum.TIME)
@@ -254,13 +351,13 @@ class PostgresqlConfiguration:
             table = sql.Identifier(META_DATA_TABLE_NAME)
 
         # META_DATA_TABLE_COLUMNS = ["table_name", "column_name",  "quantity", "unit", "description"]
-        insert_columns = [f"{c} VARCHAR({n}) {'NOT NULL' if nn else ''}"
+        insert_columns = [f"{c} VARCHAR({n}){' NOT NULL' if nn else ''}"
                           for c,n,nn in zip(META_DATA_TABLE_COLUMNS,
                                             META_DATA_TABLE_COLUMN_LENGTH,
                                             META_DATA_TABLE_NOT_NULL)]
         insert_column_statement = ",\n".join(insert_columns)
         sql_string = "CREATE TABLE IF NOT EXISTS {table}" + \
-                      f" ({insert_column_statement} " + \
+                      f" ({insert_column_statement}" + \
                       f", PRIMARY KEY ({META_DATA_TABLE_COLUMNS[0]},{META_DATA_TABLE_COLUMNS[1]}))"
         with self.connection.cursor() as cursor:
             # create metadata table if not exists
@@ -274,7 +371,7 @@ class PostgresqlConfiguration:
                         f"({','.join( ['%s'] * len(META_DATA_TABLE_COLUMNS) )})" +\
                         f" ON CONFLICT ({','.join(META_DATA_TABLE_COLUMNS[:2])} ) DO UPDATE SET ({','.join(META_DATA_TABLE_COLUMNS[2:])}) = " + \
                          "(" + ','.join([f'EXCLUDED.{column}' for column in META_DATA_TABLE_COLUMNS[2:]]) + ")"
-            # TODO: add update statement on conflict / support Upsert
+
             query = sql.SQL(upsert_sql).format(table=table)
             if DEBUG_SQL:
                 print(query.as_string(cursor))

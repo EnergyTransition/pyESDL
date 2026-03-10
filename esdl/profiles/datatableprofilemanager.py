@@ -12,7 +12,7 @@
 #  Manager:
 #      TNO
 from os import environ
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 from uuid import uuid4
 
 from pyecore.ecore import EDate
@@ -36,8 +36,8 @@ if environ.get("DB_HOST", None):
 
 class DataTableProfileManager(ProfileManager):
     """
-    InfluxDBProfileManager: manages profile data that can be loaded from and saved to InfluxDB (v1 only).
-    InfluxDBProfileManager is a subclass of ProfileManager, so it also provides functionality to convert from/to
+    DataTableProfileManager: manages profile data that can be loaded from and saved to Postgres.
+    DataTableProfileManager is a subclass of ProfileManager, so it also provides functionality to convert from/to
     different ESDL profiles and to load/save to CSV
     """
     data_table_profile: esdl.DataTableProfile
@@ -45,7 +45,7 @@ class DataTableProfileManager(ProfileManager):
 
     def __init__(self, data_table_profile: esdl.DataTableProfile = None, source_profile=None):
         """
-        Constructor of the InfluxDBProfileManager
+        Constructor of the DataTableProfileManager
 
         :param data_table_profile: the DataTableProfile to load
         :param source_profile: the source profile of which the data is copied into this profiles manager instance
@@ -71,7 +71,7 @@ class DataTableProfileManager(ProfileManager):
     def load_database_configuration(self, configuration: esdl.DatabaseConfiguration = None,
                                     credentials_dict: dict[str, Credentials] = None):
         """
-        Loads profile information from a database configuration into
+        Loads profile data from a database configuration into
         profile_info and profile_header
 
         :param configuration: the database configuration, optional, otherwise
@@ -110,15 +110,15 @@ class DataTableProfileManager(ProfileManager):
              credentials_dict: dict[str, Credentials] = None) -> 'DataTableProfileManager':
         """
         Static method to create an instance of DataTableProfileManager using an esdl.DataTableProfile. The data
-        referenced to in
-        the profile is loaded from the associated DataConfiguration (e.g. DatabaseConfiguration or FileConfiguration)
-
-        Note:
-        - uri without extension is used as tableName for CSV files if no tableName is given
+        referenced to in the profile is loaded from the associated DataConfiguration
+        (e.g. DatabaseConfiguration or FileConfiguration)
 
         :param data_table_profile: esdl.DataTableProfile that is used as an input profile
-        :param credentials_dict: dictionary of credentials to use for authentication with ['id' -> Credentials] mapping, where
-        'id' refers to the id of the AbstractDataConfiguration that belongs to these credentials
+        :param credentials_dict: dictionary of credentials to use for authentication with ['id' -> Credentials] mapping,
+         where 'id' refers to the id of the AbstractDataConfiguration that belongs to these credentials
+
+        Note:
+        - for FileConfigurations: uri without extension is used as tableName for CSV files if no tableName is given
         """
 
         if not credentials_dict:
@@ -155,6 +155,44 @@ class DataTableProfileManager(ProfileManager):
         else:
             raise UnsupportedDataConfiguration(
                 f"DataConfiguration {configuration} is not yet supported")
+
+    @staticmethod
+    def query(data_table_profile: esdl.DataTableProfile, additional_filters: dict[str, Any] = None,
+              column_based=False, credentials_dict: dict[str, Credentials] = None) -> Tuple[
+        List[List[float]], List[str], List[esdl.QuantityAndUnitType] ]:
+        """
+        Static method to query the data represented by an esdl.DataTableProfile. The data
+        referenced to in the DataTableProfile is queried based on the information in the associated DataConfiguration
+        (e.g. DatabaseConfiguration or FileConfiguration). Data is NOT stored inside this class, but passed directly
+        to the caller.
+
+        :param data_table_profile: esdl.DataTableProfile that is used as an input profile
+        :param additional_filters: (key,value) set of additional filters for the query in the WHERE clause
+        :param column_based: if True, will return the result column based, instead of row-based
+        :param credentials_dict: dictionary of credentials to use for authentication with ['id' -> Credentials] mapping,
+         where 'id' refers to the id of the AbstractDataConfiguration that belongs to these credentials
+
+        :return: Tuple with: List of data (column-based if configured), header names,
+                QuantityAndUnit if available for each header
+        """
+        if not credentials_dict:
+            # use global credentials list
+            credentials_dict = global_credentials
+        configuration = data_table_profile.configuration
+        if isinstance(configuration, esdl.DatabaseConfiguration):
+            if configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
+                postgres = PostgresqlConfiguration(data_table_profile, credentials_dict)
+                profile_data_list, profile_header, metadata = postgres.load_data(additional_filters=additional_filters,
+                                                                                 column_based=column_based)
+                qaus = [m.qau for m in metadata]
+                postgres.disconnect()
+                return profile_data_list, profile_header, qaus
+            else:
+                raise UnsupportedDataConfiguration(f"DataConfiguration of type {configuration.type.name} "
+                                                   f"is not yet supported for direct querying")
+        else:
+            raise UnsupportedDataConfiguration(f"DataConfiguration of type {configuration.type.name} "
+                                               f"is not yet supported for direct querying")
 
     def get_data_table_profile(self, profile_name: str = None, table_name: str = None,
                                schema_name: str = None) -> DataTableProfile | list[DataTableProfile]:
@@ -222,10 +260,12 @@ class DataTableProfileManager(ProfileManager):
     #     """
     #     pass
 
-    def save(self, credentials_dict: dict[str, Credentials] = None):
+    def save(self, credentials_dict: dict[str, Credentials] = None, drop=True):
         """
         Saves the current datatable profile to the database
-        :return: Data written in the database and an esdl.DataTableProfile that reflects this.
+        :param credentials_dict Dict with Credentials to connect to the database, or use global defined credentials
+        :param drop Drop data in the referenced table before writing data (default=True)
+
         """
 
         if not credentials_dict:
@@ -234,7 +274,7 @@ class DataTableProfileManager(ProfileManager):
         if self.data_table_profile.configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
             # handle postgres
             postgres = PostgresqlConfiguration(self.data_table_profile, credentials_dict)
-            postgres.save_data(self.profile_data_list, self.profile_header)
+            postgres.save_data(self.profile_data_list, self.profile_header, overwrite=drop)
             postgres.disconnect()
         else:
             raise UnsupportedDataConfiguration(

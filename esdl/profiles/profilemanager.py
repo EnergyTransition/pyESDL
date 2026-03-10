@@ -17,7 +17,7 @@ import csv
 import locale
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Any
+from typing import List, Any, Optional
 from uuid import uuid4
 
 import pytz
@@ -44,20 +44,14 @@ class ProfileManager:
     """
     Represents a generic (set of) profile(s). Can be converted into ESDL profiles.
     """
-    profile_header: List[str] | None
-    profile_data_list: List[List[Any]]
-    profile_type: ProfileType
-    start_datetime: datetime
-    end_datetime: datetime
-    num_profile_items: int
 
     def __init__(self, source_profile: "ProfileManager" = None):
-        self.profile_header = None  # in case of CSV or Excel based profile data
-        self.profile_data_list = []
-        self.profile_type = ProfileType.UNKNOWN
-        self.start_datetime = None
-        self.end_datetime = None
-        self.num_profile_items = 0
+        self.profile_header: List[str] | None = None  # in case of CSV or Excel based profile data
+        self.profile_data_list: List[List[Any]] = []
+        self.profile_type: ProfileType = ProfileType.UNKNOWN
+        self.start_datetime: Optional[datetime] = None
+        self.end_datetime: Optional[datetime] = None
+        self.num_profile_items: int = 0
 
         if source_profile:
             self.convert(source_profile)
