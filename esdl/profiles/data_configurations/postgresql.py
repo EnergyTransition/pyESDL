@@ -100,10 +100,10 @@ class PostgresqlConfiguration:
             # column is None if we want to query all columns
             col_ident = sql.Identifier(self.datatable_profile.columnName) if self.datatable_profile.columnName else None
 
-            where_sql, params = self._build_where_clause(dt_ident,
-                                                         self.datatable_profile.startDate,
-                                                         self.datatable_profile.endDate,
-                                                         additional_filters)
+            where_sql, params = PostgresqlConfiguration._build_where_clause(dt_ident,
+                                                                            self.datatable_profile.startDate,
+                                                                            self.datatable_profile.endDate,
+                                                                            additional_filters)
 
             if self.datatable_profile.columnName:
                 query = sql.SQL("SELECT {dt}, {col} FROM {tbl} {where}").format(
@@ -123,7 +123,7 @@ class PostgresqlConfiguration:
             result = cursor.fetchall()
             
             # process results
-            profile_values, header = self._process_query_results(cursor, result, self.datatable_profile.datetimeColumnName, column_based)
+            profile_values, header = PostgresqlConfiguration._process_query_results(cursor, result, self.datatable_profile.datetimeColumnName, column_based)
             metadata = [self.load_meta_data(c) for c in header]
 
             return profile_values, header, metadata

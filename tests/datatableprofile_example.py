@@ -106,18 +106,18 @@ if __name__ == '__main__':
     # additional_filters = {"datetime": '2019-01-22 00:00:00.000'}
     additional_filters = None
 
-    profile_values, header, metadata = DataTableProfileManager().query(data_table_profile=dtp4,
-                                                                       credentials_dict=cred_dict,
-                                                                       table_name=tableName,
-                                                                       column_name=columnName,
-                                                                       schema=schema,
-                                                                       datetime_column_name=None,
-                                                                       start_date=start_date,
-                                                                       additional_filters=additional_filters,
-                                                                       multiplier=1,
-                                                                       downsample_bucket_sec=downsample_bucket_sec,
-                                                                       column_based=return_column,
-                                                                       )
+    profile_values, header, metadata = DataTableProfileManager.query(data_table_profile=dtp4,
+                                                                    credentials_dict=cred_dict,
+                                                                    table_name=tableName,
+                                                                    column_name=columnName,
+                                                                    schema=schema,
+                                                                    datetime_column_name=None,
+                                                                    start_date=start_date,
+                                                                    additional_filters=additional_filters,
+                                                                    multiplier=10,
+                                                                    downsample_bucket_sec=downsample_bucket_sec,
+                                                                    column_based=return_column,
+                                                                    )
     if return_column:
         print(profile_values[0][:10])
         print(profile_values[1][:10])
