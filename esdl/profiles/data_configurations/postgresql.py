@@ -1,13 +1,13 @@
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from logging import warning, error
 from typing import Any, Optional, List, Tuple, Dict
-import re
 
 import psycopg
 from psycopg import Connection, sql
 
-from esdl import esdl, QuantityAndUnitType, PhysicalQuantityEnum
+from esdl import esdl, QuantityAndUnitType
 from esdl.profiles.data_configurations.credentials import Credentials
 from esdl.units.parser import unit_to_string, build_qau_from_unit_string
 
@@ -75,9 +75,13 @@ class PostgresqlConfiguration:
     def disconnect(self):
         if self.connection:
             self.connection.close()
-
-    def load_data(self, additional_filters: Dict[str, Any] = None, column_based:bool = False) -> Tuple[List[List[any]], List[str], List[DataTableMetaData]]:
+    
+    def load_data(self, additional_filters: Dict[str, Any] = None, column_based:bool = False) -> Tuple[List[List[any]], List[str], List[DataTableMetaData | None]]:
         """
+        Load data from the configured table using the DataTableProfile settings.
+        Supports querying a single column or all columns. The datetime column is
+        always returned as the first column.
+        
         :param additional_filters: (key,value) set of additional filters for the query in the WHERE clause
         :param column_based if True, data is returned by column instead of row
         :return a tuple of profile_values[[]], header[], List[DataTableMetaData] with data loaded from Postgres.
@@ -85,9 +89,6 @@ class PostgresqlConfiguration:
         """
         if not self.connection:
             raise Exception('PostgreSQL connection not established')
-        # if not self.datatable_profile.columnName:
-        #     raise InvalidDataTableProfile('DataTableProfile columnName not defined')
-
 
         with self.connection.cursor() as cursor:
             if self.datatable_profile.schema:
@@ -99,53 +100,91 @@ class PostgresqlConfiguration:
             # column is None if we want to query all columns
             col_ident = sql.Identifier(self.datatable_profile.columnName) if self.datatable_profile.columnName else None
 
-            # Collect WHERE clauses
-            where_clauses = []
-            params = []
-            if self.datatable_profile.startDate and self.datatable_profile.endDate:
-                where_clauses.append(sql.SQL("{dt} >= %s").format(dt=dt_ident))
-                where_clauses.append(sql.SQL("{dt} <= %s").format(dt=dt_ident))
-                params.extend([
-                    self.datatable_profile.startDate.strftime('%Y-%m-%dT%H:%M:%SZ'),
-                    self.datatable_profile.endDate.strftime('%Y-%m-%dT%H:%M:%SZ')
-                ])
+            where_sql, params = self._build_where_clause(dt_ident,
+                                                         self.datatable_profile.startDate,
+                                                         self.datatable_profile.endDate,
+                                                         additional_filters)
 
-            bucket_seconds = None
-
-            # NOTE: The filter string parsing here does not yet support 'OR' or more complex filtering.
-            if self.datatable_profile.filter:
-                """
-                Parse a filter string like:
-                "col"='a' AND "colB"=50
-                into: [('col', 'a', ''), ('colB', '', '50')]
-                """
-                pattern = r'"?(\w+)"?\s*=\s*(?:\'([^\']*)\'|(\d+))'
-                matches = re.findall(pattern, self.datatable_profile.filter)
-
-                # todo: refactor to use additional_filters
-                if not matches:
-                    logging.error(f"Failed to parse filter string: {self.datatable_profile.filter}")
-                for col, str_val, num_val in matches:
-                    value = str_val if str_val else float(num_val)
-                    if col == "groupby_interval_sec":
-                        bucket_seconds = value
-                    else:
-                        where_clauses.append(sql.SQL("{tag} = %s").format(tag=sql.Identifier(col)))
-                        params.append(value)
-
-            if where_clauses:
-                where_sql = sql.SQL(" WHERE ") + sql.SQL(" AND ").join(where_clauses)
+            if self.datatable_profile.columnName:
+                query = sql.SQL("SELECT {dt}, {col} FROM {tbl} {where}").format(
+                    dt=dt_ident,
+                    col=col_ident,
+                    tbl=table_ident,
+                    where=where_sql
+                )
             else:
-                where_sql = sql.SQL("")
+                # Fallback to select all columns
+                query = sql.SQL("SELECT * FROM {tbl} {where}").format(tbl=table_ident, where=where_sql)
+
+            if DEBUG_SQL:
+                print(query.as_string(cursor))
+
+            cursor.execute(query, params)
+            result = cursor.fetchall()
+            
+            # process results
+            profile_values, header = self._process_query_results(cursor, result, self.datatable_profile.datetimeColumnName, column_based)
+            metadata = [self.load_meta_data(c) for c in header]
+
+            return profile_values, header, metadata
+
+    def load_data_custom(self,
+                         schema: Optional[str],
+                         table_name: str,
+                         datetime_column_name: str,
+                         column_name: str,
+                         start_date: Optional[datetime],
+                         end_date: Optional[datetime],
+                         additional_filters: Optional[Dict[str, Any]],
+                         multiplier: Optional[float],
+                         downsample_bucket_sec: Optional[int],
+                         column_based: bool
+                       ) -> Tuple[List[List[any]], List[str], List[DataTableMetaData | None]]:
+        """
+        Execute a flexible SQL query against a PostgreSQL table, supporting a SINGLE
+        value column, datetime filtering, optional downsampling, and additional
+        equality-based filters.
+
+        :param schema: Optional schema name.
+        :param table_name: Name of the table to query.
+        :param datetime_column_name: Name of the datetime column.
+        :param column_name: Name of the data column to query.
+        :param start_date: Optional start datetime for filtering.
+        :param end_date: Optional end datetime for filtering.
+        :param additional_filters: Optional dict of column=value filters for the WHERE clause.
+        :param multiplier: Optional multiplier for scaling profile value.
+        :param downsample_bucket_sec: If provided, results are grouped into fixed-size
+                                    time buckets and averaged.
+        :param column_based: If True, return data grouped by column instead of row.
+
+        :return: A tuple of (profile_values, header, metadata).
+        """
+        if not self.connection:
+            raise Exception('PostgreSQL connection not established')
+        
+        with self.connection.cursor() as cursor:
+            if schema:
+                table_ident = sql.Identifier(schema, table_name)
+            else:
+                table_ident = sql.Identifier(table_name)
+
+            dt_ident = sql.Identifier(datetime_column_name)
+            col_ident = sql.Identifier(column_name)
+
+            # Scale profile value if multiplier is given;
+            # otherwise, DataTableProfile assigned multiplier or default value (1.0) is used.
+            multiplier = multiplier if multiplier is not None else self.datatable_profile.multiplier
+
+            where_sql, params = PostgresqlConfiguration._build_where_clause(dt_ident, start_date, end_date, additional_filters)
 
             # Downsampled query by grouping them into fixed-size buckets.
-            if bucket_seconds:
+            if downsample_bucket_sec:
                 query = sql.SQL("""
                     SELECT
                         to_timestamp(
                             floor(extract(epoch from {dt}) / %s) * %s
                         )::timestamp AS {dt},
-                        AVG({col}) AS {col}
+                        AVG({col} * %s) AS {col}
                     FROM {tbl}
                     {where}
                     GROUP BY 1
@@ -156,59 +195,106 @@ class PostgresqlConfiguration:
                     tbl=table_ident,
                     where=where_sql
                 )
-                params = [bucket_seconds, bucket_seconds, *params]
-                if DEBUG_SQL:
-                    print(query.as_string(cursor))
-            # Normal query
+                params = [downsample_bucket_sec, downsample_bucket_sec, multiplier, *params]
+            # Fallback to normal query
             else:
-                query = sql.SQL("SELECT {dt}, {col} FROM {tbl} {where}").format(
+                query = sql.SQL("SELECT {dt}, ({col} * %s) AS {col} FROM {tbl} {where}").format(
                     dt=dt_ident,
                     col=col_ident,
                     tbl=table_ident,
                     where=where_sql
                 )
+                params = [multiplier, *params]
 
-            if self.datatable_profile.columnName:
-                # print(query.as_string(cursor), params)
-                if DEBUG_SQL:
-                    print(query.as_string(cursor))
-                cursor.execute(query, params)
-            else:
-                # Fallback to select all columns
-                query = sql.SQL("SELECT * FROM {tbl}").format(tbl=table_ident)
-                if DEBUG_SQL:
-                    print(query.as_string(cursor))
-                cursor.execute(query)
+            if DEBUG_SQL:
+                print(query.as_string(cursor))
+
+            cursor.execute(query, params)
             result = cursor.fetchall()
-            # process results
-            columns = cursor.description
-            column_names = [c.name for c in columns]
-            try:
-                datetime_column_index = column_names.index(self.datatable_profile.datetimeColumnName)
-                #datetime_column_index = [c.type_display for c in columns].index('timestamp')
-            except ValueError:
-                datetime_column_index = 0 # assume first column is datetime column
-            dt_colum = column_names.pop(datetime_column_index)
-            header = [dt_colum, *column_names] # make sure date time column is first in list.
 
-            profile_values = []
-            if column_based:
-                profile_values = [[] for _ in range(len(header))]
-            for row in result:
-                copy = list(row)
-                datetime = copy.pop(datetime_column_index) # insert datetime as first column
-                ordered_row_data = [datetime, *copy]
-                if not column_based:
-                    profile_values.append(ordered_row_data)
-                else:
-                    for i in range(len(column_names)):
-                        profile_values[i].append(ordered_row_data[i])
-            metadata: List[DataTableMetaData] = []
-            for c in [dt_colum, *column_names]:
-                dtmd = self.load_meta_data(c)
-                metadata.append(dtmd)
+            profile_values, header = PostgresqlConfiguration._process_query_results(cursor, result, datetime_column_name, column_based)
+            
+            metadata = [self.load_meta_data(c) for c in header]
 
             return profile_values, header, metadata
+
+    @staticmethod
+    def _build_where_clause(dt_ident,
+                            start_date: Optional[datetime],
+                            end_date: Optional[datetime],
+                            additional_filters: Dict[str, Any] = None) -> Tuple[Any, List]:
+        """
+        A utility function to build a SQL WHERE clause for datetime range and simple equality filters.
+
+        :param dt_ident: psycopg2 SQL identifier for the datetime column.
+        :param start_date: Optional start datetime for filtering.
+        :param end_date: Optional end datetime for filtering.
+        :param additional_filters: Optional dict of column=value filters.
+        :return: A tuple of (where_sql, params_list).
+        """
+        if additional_filters is not None and not isinstance(additional_filters, dict):
+            raise TypeError("additional_filters must be a dict or None")
+        
+        where_clauses = []
+        params = []
+
+        dt_str_format = '%Y-%m-%dT%H:%M:%SZ'
+
+        if start_date:
+            where_clauses.append(sql.SQL("{dt} >= %s").format(dt=dt_ident))
+            params.append(start_date.strftime(dt_str_format))
+        
+        if end_date:
+            where_clauses.append(sql.SQL("{dt} <= %s").format(dt=dt_ident))
+            params.append(end_date.strftime(dt_str_format))
+
+        # NOTE: 'OR' or more complex filtering is not supported yet.
+        if additional_filters:
+            for col, val in additional_filters.items():
+                where_clauses.append(sql.SQL("{col} = %s").format(col=sql.Identifier(col)))
+                params.append(val)
+
+        where_sql = (
+            sql.SQL(" WHERE ") + sql.SQL(" AND ").join(where_clauses)
+            if where_clauses else sql.SQL("")
+        )
+
+        return where_sql, params
+    
+    @staticmethod
+    def _process_query_results(cursor,
+                               result: List,
+                               datetime_column_name: str,
+                               column_based: bool) -> Tuple[List[List], List[str]]:
+        """
+        Reorder results so the datetime column is always first.
+        Supports row-based or column-based output.
+        """
+        columns = cursor.description
+        column_names = [c.name for c in columns]
+
+        try:
+            dt_index = column_names.index(datetime_column_name)
+        except ValueError:
+            dt_index = 0
+
+        dt_col = column_names.pop(dt_index)
+        header = [dt_col, *column_names]
+
+        profile_values = [[] for _ in range(len(header))] if column_based else []
+
+        for row in result:
+            row_list = list(row)
+            dt_val = row_list.pop(dt_index)
+            ordered = [dt_val, *row_list]
+
+            if not column_based:
+                profile_values.append(ordered)
+            else:
+                for i, val in enumerate(ordered):
+                    profile_values[i].append(val)
+
+        return profile_values, header
 
     def load_meta_data(self, column_name: str = None) -> None | DataTableMetaData:
         """
@@ -300,9 +386,8 @@ class PostgresqlConfiguration:
             if DEBUG_SQL:
                 print(query.as_string(cursor))
             cursor.execute(query)
-            # create index on datetime column
-            # CREATE INDEX events_timestamp_idx ON public.events USING btree ("timestamp");
-            sql_string = r'CREATE INDEX IF NOT EXISTS metadata_datetime_idx ON {table} USING btree ({column_name})'
+            # create index on table datetime column
+            sql_string = r'CREATE INDEX IF NOT EXISTS {table}_metadata_datetime_idx ON {table} USING btree ({column_name})'
             query = sql.SQL(sql_string).format(table=table, column_name=sql.Identifier(self.datatable_profile.datetimeColumnName))
             cursor.execute(query)
             self.connection.commit()

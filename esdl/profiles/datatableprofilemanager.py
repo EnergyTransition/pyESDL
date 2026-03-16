@@ -12,7 +12,8 @@
 #  Manager:
 #      TNO
 from os import environ
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Tuple, Optional
+from datetime import datetime
 from uuid import uuid4
 
 from pyecore.ecore import EDate
@@ -36,7 +37,7 @@ if environ.get("DB_HOST", None):
 
 class DataTableProfileManager(ProfileManager):
     """
-    DataTableProfileManager: manages profile data that can be loaded from and saved to Postgres.
+    DataTableProfileManager: manages profile data that can be loaded from and saved to Postgres or InfluxDB.
     DataTableProfileManager is a subclass of ProfileManager, so it also provides functionality to convert from/to
     different ESDL profiles and to load/save to CSV
     """
@@ -157,20 +158,40 @@ class DataTableProfileManager(ProfileManager):
                 f"DataConfiguration {configuration} is not yet supported")
 
     @staticmethod
-    def query(data_table_profile: esdl.DataTableProfile, additional_filters: dict[str, Any] = None,
-              column_based=False, credentials_dict: dict[str, Credentials] = None) -> Tuple[
+    def query(data_table_profile: esdl.DataTableProfile,
+              credentials_dict: Optional[Dict[str, Credentials]],
+              table_name: str,
+              column_name: str,
+              schema: Optional[str] = None,
+              datetime_column_name: Optional[str] = None,
+              start_date: Optional[datetime] = None,
+              end_date: Optional[datetime] = None,
+              additional_filters: Optional[Dict[str, Any]] = None,
+              multiplier: Optional[float] = None,
+              downsample_bucket_sec: Optional[int] = None,
+              column_based: bool = False
+              ) -> Tuple[
         List[List[float]], List[str], List[esdl.QuantityAndUnitType] ]:
-        """
-        Static method to query the data represented by an esdl.DataTableProfile. The data
-        referenced to in the DataTableProfile is queried based on the information in the associated DataConfiguration
-        (e.g. DatabaseConfiguration or FileConfiguration). Data is NOT stored inside this class, but passed directly
+        """      
+        Query data from a PostgreSQL-backed DataTableProfile using the associated
+        DatabaseConfiguration. This method acts as the high-level API for retrieving
+        profile data, applying optional filtering, scaling, and downsampling.
+
+        Data is NOT stored inside this class, but passed directly
         to the caller.
 
-        :param data_table_profile: esdl.DataTableProfile that is used as an input profile
-        :param additional_filters: (key,value) set of additional filters for the query in the WHERE clause
-        :param column_based: if True, will return the result column based, instead of row-based
-        :param credentials_dict: dictionary of credentials to use for authentication with ['id' -> Credentials] mapping,
-         where 'id' refers to the id of the AbstractDataConfiguration that belongs to these credentials
+        :param data_table_profile: The esdl.DataTableProfile describing the data source and default query parameters.
+        :param credentials_dict: Optional mapping of configuration ID → Credentials. If None, global credentials are used.
+        :param table_name: Name of the database table to query.
+        :param column_name: Name of the single value column to retrieve.
+        :param schema: Optional schema name. If None, the default schema is used.
+        :param datetime_column_name: Optional override for the datetime column name. If None, the profile's datetime column is used.
+        :param start_date: Optional start datetime for filtering.
+        :param end_date: Optional end datetime for filtering.
+        :param additional_filters: Optional (key, value) set of additional filters applied in the SQL WHERE clause.
+        :param multiplier: Optional scaling factor applied to the value column. If None, the profile's default multiplier is used.
+        :param downsample_bucket_sec: Optional bucket size (in seconds) for time-based downsampling using AVG().
+        :param column_based: If True, results are returned column-based instead of row-based.
 
         :return: Tuple with: List of data (column-based if configured), header names,
                 QuantityAndUnit if available for each header
@@ -178,22 +199,37 @@ class DataTableProfileManager(ProfileManager):
         if not credentials_dict:
             # use global credentials list
             credentials_dict = global_credentials
+
         configuration = data_table_profile.configuration
         if isinstance(configuration, esdl.DatabaseConfiguration):
             if configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
                 postgres = PostgresqlConfiguration(data_table_profile, credentials_dict)
-                profile_data_list, profile_header, metadata = postgres.load_data(additional_filters=additional_filters,
-                                                                                 column_based=column_based)
+
+                dt_column_name = datetime_column_name if datetime_column_name is not None else data_table_profile.datetimeColumnName
+
+                profile_data_list, profile_header, metadata = postgres.load_data_custom(schema=schema,
+                                                                                        table_name=table_name,
+                                                                                        datetime_column_name=dt_column_name,
+                                                                                        column_name=column_name,
+                                                                                        start_date=start_date,
+                                                                                        end_date=end_date,
+                                                                                        additional_filters=additional_filters,
+                                                                                        multiplier=multiplier,
+                                                                                        downsample_bucket_sec=downsample_bucket_sec,
+                                                                                        column_based=column_based)
                 qaus = [m.qau for m in metadata]
                 postgres.disconnect()
                 return profile_data_list, profile_header, qaus
+            elif configuration.type == esdl.DatabaseTypeEnum.INFLUXDB:
+                # TODO: support Influxdb
+                pass
             else:
                 raise UnsupportedDataConfiguration(f"DataConfiguration of type {configuration.type.name} "
                                                    f"is not yet supported for direct querying")
         else:
             raise UnsupportedDataConfiguration(f"DataConfiguration of type {configuration.type.name} "
                                                f"is not yet supported for direct querying")
-
+        
     def get_data_table_profile(self, profile_name: str = None, table_name: str = None,
                                schema_name: str = None) -> DataTableProfile | list[DataTableProfile]:
         """Creates an esdl.DataTableProfile instance that refers to the data loaded in this ProfileManager
