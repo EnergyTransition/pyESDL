@@ -106,6 +106,55 @@ class DataTableProfileManager(ProfileManager):
             raise UnsupportedDataConfiguration(
                 f"DataConfiguration of type {configuration.type.name} is not yet supported")
 
+    def get_profile_with_multiplier(self, column_based: bool = False) -> List[List[float]]:
+        """
+        Return the loaded profile data with the configured multiplier applied to a column or all
+        columns (if columnName is not set). The datetime column is returned unchanged as the first
+        column.
+
+        :param column_based: If True, return data grouped by column instead of row. If False, return row-based data.
+        :return: A list of columns, where the first column is the datetime values and
+                subsequent columns are scaled numeric data columns.
+        :raises NoProfileLoadedExecption: If no profile data has been loaded.
+        """
+
+        if len(self.profile_header) == 0:
+            raise NoProfileLoadedExecption("No profile loaded, header is empty.")
+
+        # Default to 1.0 if not explicitly set.
+        multiplier = self.data_table_profile.multiplier
+        
+        # Default to 'datetime' if not explicitly set.
+        dt_col_name = self.data_table_profile.datetimeColumnName
+        dt_index = self.profile_header.index(dt_col_name)
+
+        if self.data_table_profile.columnName is not None:
+            # A single column case
+            col_names = [self.data_table_profile.columnName]
+        else:
+            # Multi-column mode: all columns except datetime
+            col_names = [c for c in self.profile_header if c != dt_col_name]
+
+        scaled_profile_data = []
+
+        # Process row-based structure
+        for row in self.profile_data_list:
+            dt_value = row[dt_index]
+            scaled_row = [dt_value]
+
+            for col_name in col_names:
+                col_index = self.profile_header.index(col_name)
+                value = row[col_index]
+                scaled_row.append(value * multiplier)
+
+            scaled_profile_data.append(scaled_row)
+
+        # Convert to column-based if requested
+        if column_based:
+            return [list(col) for col in zip(*scaled_profile_data)]
+
+        return scaled_profile_data
+
     @staticmethod
     def load(data_table_profile: esdl.DataTableProfile,
              credentials_dict: dict[str, Credentials] = None) -> 'DataTableProfileManager':

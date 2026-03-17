@@ -15,7 +15,7 @@ from esdl.units.parser import unit_to_string, build_qau_from_unit_string
 META_DATA_TABLE_NAME = "datatable_metadata"
 META_DATA_TABLE_COLUMNS = ["table_name", "column_name",  "physical_quantity", "unit", "profile_name"]
 META_DATA_TABLE_COLUMN_LENGTH = [64, 64, 32, 32, 255]  # VARCHAR lengths
-META_DATA_TABLE_NOT_NULL = [True, True, False, False, False]
+META_DATA_TABLE_NOT_NULL = [True, True, True, False, False]
 
 # set to True to enable debugging of SQL statements
 DEBUG_SQL = False
