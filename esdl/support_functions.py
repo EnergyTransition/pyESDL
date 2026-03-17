@@ -15,6 +15,8 @@
 """
 Support functions for managing EObjects
 """
+from typing import Dict
+
 from pyecore.ecore import EAttribute, EObject, EClass, EReference, EStructuralFeature
 from pyecore.innerutils import InternalSet
 from pyecore.valuecontainer import ECollection
@@ -23,13 +25,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
 # add support for shallow copying or cloning an object
 # it copies the object's attributes (e.g. clone an object), does only shallow copying
 def clone(self):
     """
     Shallow copying or cloning an object
     It only copies the object's attributes (e.g. clone an object)
-    Usage object.clone() or copy.copy(object) (as _copy__() is also implemented)
+    Usage object.clone() or copy.copy(object) (as __copy__() is also implemented)
     :param self:
     :return: A clone of the object
     """
@@ -47,12 +50,21 @@ def clone(self):
     return newone
 
 
-def deepcopy(self, memo=None, target_es=None):
+def deepcopy(self, memo=None, uuid_dict: Dict[str, EObject]=None, target_es: EObject=None, copy_xrefs=True) -> EObject:
     """
     Deep copying an EObject.
-    Does not work yet for copying references from other resources than this one.
+
+    :param memo: is used in recursive calls to find out which object have already been cloned
+    :param uuid_dict: can be passed by the user to update the uuid_dict of the resource while deepcopying
+    :param target_es search for cross-references in the target_es energy system or eObject if not found in copy.
+           This can be used if the source ESDL has the same IDs as the target ESDL (e.g. quantity and units,
+           or carriers) to make use the cross references are also connected in the deepcopy, before adding it to the
+           `target_es`
+    :param copy_xrefs copy cross-references (default). Set to False to not copy cross-references, e.g. in case
+           you want to avoid copying references to other ESDLs that not have them. E.g. when cutting out an asset
+           from an ESDL, without references to other parts of this ESDL.
+    :return a deepcopy of the object.
     """
-    #logger.debug("deepcopy: processing {}".format(self))
     first_call = False
     if memo is None:
         memo = dict()
@@ -61,11 +73,11 @@ def deepcopy(self, memo=None, target_es=None):
         return memo[self]
 
     copy: EObject = self.clone()
-    #logger.debug("Shallow copy: {}".format(copy))
+    if uuid_dict is not None and hasattr(copy, 'id'):
+        uuid_dict[copy.id] = copy
     eclass: EClass = self.eClass
     for x in eclass.eAllStructuralFeatures():
         if isinstance(x, EReference):
-            #logger.debug("deepcopy: processing reference {}".format(x.name))
             ref: EReference = x
             value: EStructuralFeature = self.eGet(ref)
             if value is None:
@@ -73,21 +85,21 @@ def deepcopy(self, memo=None, target_es=None):
             if ref.containment:
                 if ref.many and isinstance(value, ECollection):
                     #clone all containment elements
-                    eAbstractSet = copy.eGet(ref.name)
+                    eAbstractSet: ECollection = copy.eGet(ref.name)
                     for ref_value in value:
-                        duplicate = ref_value.__deepcopy__(memo, target_es)
+                        duplicate = ref_value.__deepcopy__(memo, uuid_dict, target_es, copy_xrefs)
                         eAbstractSet.append(duplicate)
                 else:
-                    copy.eSet(ref.name, value.__deepcopy__(memo, target_es))
+                    copy.eSet(ref.name, value.__deepcopy__(memo, uuid_dict, target_es, copy_xrefs))
             #else:
             #    # no containment relation, but a reference
             #    # this can only be done after a full copy
             #    pass
-    # now copy should a full copy, but without cross references
+    # now copy should a full copy, but without cross-references
 
     memo[self] = copy
 
-    if first_call:
+    if first_call and copy_xrefs:
         #logger.debug("copying references")
         for k, v in memo.items():
             eclass: EClass = k.eClass
@@ -116,18 +128,18 @@ def deepcopy(self, memo=None, target_es=None):
                                                 r = target_es.eResource
                                                 ref_id = orig_ref_value.id
                                                 copy_ref_value = r.uuid_dict[ref_id]
-                                                logger.warning(
-                                                    f'Using reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using {copy_ref_value}')
+                                                #logger.warning(
+                                                #    f'Using reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using {copy_ref_value}')
                                             else:
                                                 logger.warning(
-                                                    f'No id found, Cannot find reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
+                                                    f'deepcopy(): No id found in target_es, cannot find reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
                                                 copy_ref_value = orig_ref_value
                                         else:
                                             logger.warning(
-                                                f'Cannot find reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
+                                                f'deepcopy(): Cannot find reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
                                             copy_ref_value = orig_ref_value
                                     except Exception:
-                                        logger.warning(f'Cannot find reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
+                                        logger.warning(f'deepcopy(): Cannot find reference of type {orig_ref_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
                                         copy_ref_value = orig_ref_value
                                 eAbstractSet.append(copy_ref_value)
                         else:
@@ -140,19 +152,25 @@ def deepcopy(self, memo=None, target_es=None):
                                             r = target_es.eResource
                                             ref_id = orig_value.id
                                             copy_value = r.uuid_dict[ref_id]
-                                            logger.debug(
-                                                f'Using reference of type {orig_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using {copy_value}')
+                                            # logger.debug(
+                                            #     f'Using reference of type {orig_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using {copy_value}')
                                         else:
                                             logger.warning(
-                                                f'Referenced object has no ID, Can\'t find reference for {orig_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo or target_es, using original {orig_value}')
+                                                f'deepcopy(): Referenced object has no ID, Can\'t find reference for {orig_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo or target_es, using original {orig_value}')
                                             copy_value = orig_value
                                     else:
                                         logger.warning(
-                                            f'Can\'t find reference for {orig_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
+                                            f'deepcopy(): Can\'t find reference for {orig_value.eClass.name} for reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
                                         copy_value = orig_value
                                 except Exception as e:
-                                    logger.warning(f'{e}: Cannot find reference of type {orig_value.eClass.name} of reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
+                                    logger.warning(f'deepcopy(): {e}: Cannot find reference of type {orig_value.eClass.name} of reference {k.eClass.name}.{ref.name} in deepcopy memo, using original')
                                     copy_value = orig_value
                             v.eSet(ref.name, copy_value)
-    copy._isset = InternalSet(self._isset)
+    copy._isset = InternalSet(self._isset)  # copy over the eIsSet configuration, otherwise all attributes are set due to this deepcopy
     return copy
+
+
+setattr(EObject, '__copy__', clone)
+setattr(EObject, 'clone', clone)
+setattr(EObject, '__deepcopy__', deepcopy)
+setattr(EObject, 'deepcopy', deepcopy)

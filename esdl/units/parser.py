@@ -11,11 +11,9 @@
 #      TNO         - Initial implementation
 #  Manager:
 #      TNO
-import copy
 import uuid
-from typing import Union
 
-from esdl import esdl, PhysicalQuantityEnum
+from esdl import esdl
 from esdl.units.conversion import equals
 
 unitdict = {
@@ -130,7 +128,7 @@ def unit_to_string(qau):
     return s
 
 
-def build_qau_from_unit_string(unit_string: str, physical_quantity: esdl.PhysicalQuantityEnum = None):
+def build_qau_from_unit_string(unit_string: str, physical_quantity = None):
     """
     Build an esdl.QuantityAndUnit instance from a string representing only the unit (and not the physical quantity),
     for example from "kWh/yr".
@@ -138,7 +136,7 @@ def build_qau_from_unit_string(unit_string: str, physical_quantity: esdl.Physica
     :param unit_string: string representation of the QuanityAndUnit unit (without the physical quantity)
     :param physical_quantity: Optional sets the associated Physical quantity, e.g. esdl.PhysicalQuantityEnum.POWER
            or esdl.PhysicalQuantityEnum.ENERGY, esdl.PhysicalQuantityEnum.COST, also string version is supported, e.g.
-           "Power", "Energy", "Cost" (case does not matter), but Python 3.10 does not like the
+           "POWER", "ENERGY", "COST" (case does not matter), but Python 3.10 does not like the
            esdl.PhysicalQuantityEnum | str definition in the method definition.
     :result: an esdl.QuantityAndUnit instance
     """
@@ -146,12 +144,13 @@ def build_qau_from_unit_string(unit_string: str, physical_quantity: esdl.Physica
     qau = esdl.QuantityAndUnitType(id=str(uuid.uuid4()))
 
     if physical_quantity:
-        if isinstance(physical_quantity, esdl.PhysicalQuantityEnum):
-            qau.physicalQuantity = physical_quantity
-        elif isinstance(physical_quantity, str):
+        if isinstance(physical_quantity, str):
             pq = esdl.PhysicalQuantityEnum.from_string(physical_quantity.upper())
             if pq:
                 qau.physicalQuantity = pq
+        elif isinstance(physical_quantity, esdl.PhysicalQuantityEnum):
+            # WARNING: isinstance('ENERGY', esdl.PhysicalQuantityEnum) == True, even while the type is str...
+            qau.physicalQuantity = physical_quantity
 
     unit_parts = unit_string.split('/')
     if unit_parts:

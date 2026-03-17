@@ -17,6 +17,7 @@ import csv
 import locale
 from datetime import datetime, timedelta
 from enum import Enum
+from typing import List, Any, Optional
 from uuid import uuid4
 
 import pytz
@@ -43,18 +44,19 @@ class ProfileManager:
     """
     Represents a generic (set of) profile(s). Can be converted into ESDL profiles.
     """
-    def __init__(self, source_profile=None):
-        self.profile_header = None  # in case of CSV or Excel based profile data
-        self.profile_data_list = []
-        self.profile_type = ProfileType.UNKNOWN
-        self.start_datetime = None
-        self.end_datetime = None
-        self.num_profile_items = 0
+
+    def __init__(self, source_profile: "ProfileManager" = None):
+        self.profile_header: List[str] | None = None  # in case of CSV or Excel based profile data
+        self.profile_data_list: List[List[Any]] = []
+        self.profile_type: ProfileType = ProfileType.UNKNOWN
+        self.start_datetime: Optional[datetime] = None
+        self.end_datetime: Optional[datetime] = None
+        self.num_profile_items: int = 0
 
         if source_profile:
             self.convert(source_profile)
 
-    def convert(self, source):
+    def convert(self, source: "ProfileManager"):
         """
         Copies all data from one profile instance to another. Is used when creating an InfluxDBProfile from an
         ExcelProfile.
@@ -174,11 +176,11 @@ class ProfileManager:
         self.end_datetime = self.profile_data_list[-1][0]
         csv_file.close()
 
-    def parse_esdl(self, esdl_profile):
+    def parse_esdl(self, esdl_profile: esdl.TimeSeriesProfile | esdl.DateTimeProfile):
         """
         Parses an ESDL profile and loads the data
 
-        :param esdl_profile: the ESDL profile object
+        :param esdl_profile: the ESDL profile object (only esdl.TimeSeriesProfile | esdl.DateTimeProfile is supported)
         """
         if not isinstance(esdl_profile, esdl.TimeSeriesProfile) and not isinstance(esdl_profile, esdl.DateTimeProfile):
             raise Exception("Profile types other than esdl.TimeSeriesProfile or esdl.DateTimeProfile are not "
@@ -221,7 +223,7 @@ class ProfileManager:
             else:
                 raise Exception("Empty DateTimeProfile")
 
-    def get_profile_name_index(self, profile_name):
+    def get_profile_name_index(self, profile_name) -> int:
         """
         Calculates the index of the column in the profile data array based on the column name
 
@@ -236,11 +238,11 @@ class ProfileManager:
         else:
             return 1   # first element is datetime, second element is the default (or only) value
 
-    def get_esdl_datetime_profile(self, profile_name=None):
+    def get_esdl_datetime_profile(self, profile_name=None) -> esdl.DateTimeProfile:
         """
         Generates an esdl.DateTimeProfile from the loaded profile information
 
-        :param profile_name: the name of the profile (only necessary when multiple columns have been loaded)
+        :param profile_name: the name of the column/profile (only necessary when multiple columns have been loaded)
         :return: the esdl.DateTimeProfile
         """
         esdl.ProfileElement.from_.name = 'from'
@@ -263,11 +265,11 @@ class ProfileManager:
 
         return esdl_dt_profile
 
-    def get_esdl_timeseries_profile(self, profile_name=None):
+    def get_esdl_timeseries_profile(self, profile_name=None) -> esdl.TimeSeriesProfile:
         """
         Generates an esdl.TimeSeriesProfile from the loaded profile information
 
-        :param profile_name: the name of the profile (only necessary when multiple columns have been loaded)
+        :param profile_name: the name of the column/profile (only necessary when multiple columns have been loaded)
         :return: the esdl.TimeSeriesProfile
         """
         if self.profile_type is ProfileType.UNKNOWN:
