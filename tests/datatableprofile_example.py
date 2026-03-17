@@ -80,4 +80,80 @@ if __name__ == '__main__':
     print(qau_to_string(dtp.profileQuantityAndUnit))
     assert(equals(POWER_IN_kW, dtp.profileQuantityAndUnit))
 
+    print("----------------------- get scaled profile data from Postgres -----------------------")
 
+    tableName = "PG-Test-02-HeatProfiles"
+    # columnName = "SpaceHeat&HotWater_PowerProfile_2000_2010"
+    columnName = None
+    multiplier = 10.0
+
+    # get profile data with multiplier method from Postgres
+    dtp3 = esdl.DataTableProfile(id="test",
+                                 tableName=tableName,
+                                 columnName=columnName,
+                                 multiplier=multiplier
+                                 )
+    dtp3.configuration = esdl.DatabaseConfiguration(type=esdl.DatabaseTypeEnum.POSTGRESQL,
+                                                   id="my_database",
+                                                   database="energy_profiles",
+                                                   host="localhost",
+                                                   port=5432)
+    dtpm3 = DataTableProfileManager(dtp3)
+    dtpm3.add_credential(Credentials.create_dict("my_database", "postgres", "password"))
+    dtpm3.load_database_configuration()
+
+    return_column = True
+    profile_values = dtpm3.get_profile_with_multiplier(column_based=return_column)
+
+    if return_column:
+        print(profile_values[0][:10])
+        print(profile_values[1][:10])
+    else:
+        print(profile_values[:10])
+
+
+    print("----------------------- load data with custom (downsampled) query -----------------------")
+
+    # load data with custom (downsampled) query
+    import datetime
+
+    tableName = "PG-Test-02-HeatProfiles"
+    columnName = "SpaceHeat&HotWater_PowerProfile_2000_2010"
+
+    dtp4 = esdl.DataTableProfile(id="test", tableName=tableName)
+    dtp4.configuration = esdl.DatabaseConfiguration(type=esdl.DatabaseTypeEnum.POSTGRESQL,
+                                                   id="my_database",
+                                                   database="energy_profiles",
+                                                   host="localhost",
+                                                   port=5432)
+    cred_dict = Credentials.create_dict("my_database", "postgres", "password")
+
+    return_column = True
+    schema = None
+    # downsample_bucket_sec = 86400
+    downsample_bucket_sec = None
+    start_date = None
+    # start_date = datetime.datetime(2019, 1, 5)
+    # additional_filters = {"datetime": '2019-01-22 00:00:00.000'}
+    additional_filters = None
+    multiplier = 5.0
+
+    profile_values, header, metadata = DataTableProfileManager.query(data_table_profile=dtp4,
+                                                                    credentials_dict=cred_dict,
+                                                                    table_name=tableName,
+                                                                    column_name=columnName,
+                                                                    schema=schema,
+                                                                    datetime_column_name=None,
+                                                                    start_date=start_date,
+                                                                    additional_filters=additional_filters,
+                                                                    multiplier=multiplier,
+                                                                    downsample_bucket_sec=downsample_bucket_sec,
+                                                                    column_based=return_column,
+                                                                    )
+    if return_column:
+        print(profile_values[0][:10])
+        print(profile_values[1][:10])
+    else:
+        print(profile_values[:10])
+    print(header)
+    print(metadata)
