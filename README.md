@@ -116,6 +116,7 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 ## Version 26.3
 - Add support for ESDL release 26.3
+- Add initial support for new DataTableProfiles using the DataTableProfileManager with a postgres backend. Allows to easily store CSV/Excel files in postgres and add these profiles to an ESDL
 
 ## Version 26.2
 - Add support for ESDL release 26.2
