@@ -16,7 +16,11 @@ import locale
 import openpyxl
 import pytz
 
-from esdl.profiles.profilemanager import ProfileManager, DuplicateValueInProfileException, ProfileType
+from esdl.profiles.profilemanager import (
+    ProfileManager,
+    DuplicateValueInProfileException,
+    ProfileType,
+)
 from openpyxl import Workbook
 
 from esdl.utils.datetime_utils import parse_date
@@ -29,6 +33,7 @@ class ExcelProfileManager(ProfileManager):
     ExcelProfileManager is a subclass of ProfileManager, so it also provides functionality to convert from/to
     different ESDL profiles and to load/save to CSV
     """
+
     def __init__(self, source_profile=None):
         """
         Constructor of the ExcelProfileManager
@@ -62,25 +67,34 @@ class ExcelProfileManager(ProfileManager):
         for row in sheet.iter_rows(min_row=2):
             try:
                 dt = parse_date(row[0].value)
-            except ValueError:  # ValueError: row in Excel doesn't start with recognizable datetime value, ignore row
+            except (
+                ValueError
+            ):  # ValueError: row in Excel doesn't start with recognizable datetime value, ignore row
                 continue
 
             try:
-                aware_dt = pytz.utc.localize(dt)  # Assume timezone is UTC if no TZ was given
+                aware_dt = pytz.utc.localize(
+                    dt
+                )  # Assume timezone is UTC if no TZ was given
             except ValueError:  # ValueError: No naive datetime (tzinfo is already set)
                 aware_dt = dt
             row[0].value = aware_dt
             for elem_idx in range(1, len(row)):
                 try:
-                    row[elem_idx].value = float(row[elem_idx].value)      # Assume float values
+                    row[elem_idx].value = float(
+                        row[elem_idx].value
+                    )  # Assume float values
                 except Exception as e:
-                    raise Exception(f"Cannot parse profile value in CSV ({row[elem_idx].value})")
+                    raise Exception(
+                        f"Cannot parse profile value in CSV ({row[elem_idx].value})"
+                    )
 
             if previous_datetime:
                 if previous_datetime == aware_dt:
                     raise DuplicateValueInProfileException(
-                        "CSV contains duplicate datetimes ({}). Check timezone and daylight saving".
-                        format(aware_dt.strftime('%Y-%m-%dT%H:%M:%S%z'))
+                        "CSV contains duplicate datetimes ({}). Check timezone and daylight saving".format(
+                            aware_dt.strftime("%Y-%m-%dT%H:%M:%S%z")
+                        )
                     )
             previous_datetime = aware_dt
 
@@ -107,7 +121,7 @@ class ExcelProfileManager(ProfileManager):
         ws.append(self.profile_header)
         for row in self.profile_data_list:
             out_row = row[:]
-            out_row[0] = out_row[0].strftime('%Y-%m-%dT%H:%M:%SZ')
+            out_row[0] = out_row[0].strftime("%Y-%m-%dT%H:%M:%SZ")
             ws.append(out_row)
 
         wb.save(file_path)

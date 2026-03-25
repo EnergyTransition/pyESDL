@@ -19,7 +19,11 @@ import pytz
 from pyecore.ecore import EDate
 
 import esdl
-from esdl.profiles.profilemanager import ProfileManager, UnknownProfileNameException, ProfileType
+from esdl.profiles.profilemanager import (
+    ProfileManager,
+    UnknownProfileNameException,
+    ProfileType,
+)
 from influxdb import InfluxDBClient
 
 from esdl.utils.datetime_utils import parse_date
@@ -31,6 +35,7 @@ class ConnectionSettings:
     The ConnectionSettings class represents all required settings that are required to connect to an
     InfluxDB server
     """
+
     host: str
     """hostname of the InfluxDB server to connect to"""
     port: int
@@ -53,6 +58,7 @@ class InfluxDBProfileManager(ProfileManager):
     InfluxDBProfileManager is a subclass of ProfileManager, so it also provides functionality to convert from/to
     different ESDL profiles and to load/save to CSV
     """
+
     def __init__(self, settings: ConnectionSettings, source_profile=None):
         """
         Constructor of the InfluxDBProfileManager
@@ -73,10 +79,12 @@ class InfluxDBProfileManager(ProfileManager):
             password=settings.password,
             database=settings.database,
             ssl=settings.ssl,
-            verify_ssl=settings.verify_ssl
+            verify_ssl=settings.verify_ssl,
         )
 
-        if settings.database not in [db['name'] for db in self.influxdb_client.get_list_database()]:
+        if settings.database not in [
+            db["name"] for db in self.influxdb_client.get_list_database()
+        ]:
             self.influxdb_client.create_database(settings.database)
 
         if source_profile:
@@ -84,7 +92,14 @@ class InfluxDBProfileManager(ProfileManager):
             if isinstance(source_profile, InfluxDBProfileManager):
                 self.database_settings = source_profile.database_settings
 
-    def load_influxdb(self, measurement: str, fields: list, from_datetime: datetime = None, to_datetime: datetime = None, filters: list = None):
+    def load_influxdb(
+        self,
+        measurement: str,
+        fields: list,
+        from_datetime: datetime = None,
+        to_datetime: datetime = None,
+        filters: list = None,
+    ):
         """
         Loads profile information from InfluxDB
 
@@ -99,8 +114,8 @@ class InfluxDBProfileManager(ProfileManager):
 
         where_clause_list = list()
         if from_datetime and to_datetime:
-            influxdb_startdate = from_datetime.strftime('%Y-%m-%dT%H:%M:%SZ')
-            influxdb_enddate = to_datetime.strftime('%Y-%m-%dT%H:%M:%SZ')
+            influxdb_startdate = from_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
+            influxdb_enddate = to_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
 
             where_clause_list.append("time >= '" + influxdb_startdate + "'")
             where_clause_list.append("time <= '" + influxdb_enddate + "'")
@@ -109,8 +124,8 @@ class InfluxDBProfileManager(ProfileManager):
             for filter in filters:
                 where_clause_list.append(f"{filter['tag']}='{filter['value']}'")
 
-        fields_string = ','.join(['"'+field+'"' for field in fields])
-        query_string = f"SELECT {fields_string} FROM \"{measurement}\""
+        fields_string = ",".join(['"' + field + '"' for field in fields])
+        query_string = f'SELECT {fields_string} FROM "{measurement}"'
         if where_clause_list:
             query_string += " WHERE (" + " AND ".join(where_clause_list) + ")"
 
@@ -119,11 +134,15 @@ class InfluxDBProfileManager(ProfileManager):
         if res:
             res_list = res.get_points()
             for elem in res_list:
-                dt = parse_date(elem['time'])
+                dt = parse_date(elem["time"])
 
                 try:
-                    aware_dt = pytz.utc.localize(dt)  # Assume timezone is UTC if no TZ was given
-                except ValueError:  # ValueError: No naive datetime (tzinfo is already set)
+                    aware_dt = pytz.utc.localize(
+                        dt
+                    )  # Assume timezone is UTC if no TZ was given
+                except (
+                    ValueError
+                ):  # ValueError: No naive datetime (tzinfo is already set)
                     aware_dt = dt
 
                 row = [aware_dt]
@@ -137,7 +156,7 @@ class InfluxDBProfileManager(ProfileManager):
                 self.num_profile_items += 1
 
             self.end_datetime = self.profile_data_list[-1][0]
-            header = ['datetime']
+            header = ["datetime"]
             header.extend(fields)
             self.profile_header = header
             self.profile_type = ProfileType.DATETIME_LIST
@@ -146,7 +165,7 @@ class InfluxDBProfileManager(ProfileManager):
             if filters:
                 tags = dict()
                 for filter in filters:
-                    tags[filter['tag']] = filter['value']
+                    tags[filter["tag"]] = filter["value"]
             return self.get_esdl_influxdb_profile(measurement, fields, tags)
         else:
             return None
@@ -164,19 +183,24 @@ class InfluxDBProfileManager(ProfileManager):
                 if key is not None and key != "" and value is not None and value != "":
                     filter_list.append({"key": key, "value": value})
                 else:
-                    raise WrongFilterFormatException("Filter specification in ESDL profile cannot be parsed")
+                    raise WrongFilterFormatException(
+                        "Filter specification in ESDL profile cannot be parsed"
+                    )
             except:
-                raise WrongFilterFormatException("Filter specification in ESDL profile cannot be parsed")
+                raise WrongFilterFormatException(
+                    "Filter specification in ESDL profile cannot be parsed"
+                )
 
         return filter_list
 
     @staticmethod
     def create_esdl_influxdb_profile_manager(
-            esdl_profile: esdl.InfluxDBProfile,
-            username: str = None,
-            password: str = None,
-            use_ssl: bool = False,
-            verify_ssl: bool = False):
+        esdl_profile: esdl.InfluxDBProfile,
+        username: str = None,
+        password: str = None,
+        use_ssl: bool = False,
+        verify_ssl: bool = False,
+    ):
         """
         method to create an instance of InfluxDBProfileManager using an esdl.InfluxDBProfile. The data referenced to in
         the profile is loaded from InfluxDB
@@ -197,7 +221,7 @@ class InfluxDBProfileManager(ProfileManager):
             username=username,
             password=password,
             ssl=use_ssl,
-            verify_ssl=verify_ssl
+            verify_ssl=verify_ssl,
         )
 
         prof = InfluxDBProfileManager(conn_settings)
@@ -206,7 +230,9 @@ class InfluxDBProfileManager(ProfileManager):
             fields=[esdl_profile.field],
             from_datetime=esdl_profile.startDate,
             to_datetime=esdl_profile.endDate,
-            filters=InfluxDBProfileManager._parse_esdl_profile_filters(esdl_profile.filters),
+            filters=InfluxDBProfileManager._parse_esdl_profile_filters(
+                esdl_profile.filters
+            ),
         )
 
         return prof
@@ -223,7 +249,9 @@ class InfluxDBProfileManager(ProfileManager):
 
             return " AND ".join(filter_list)
 
-    def get_esdl_influxdb_profile(self, measurement: str, field_names: list, tags: dict = None):
+    def get_esdl_influxdb_profile(
+        self, measurement: str, field_names: list, tags: dict = None
+    ):
         """
         Creates an esdl.InfluxDBProfile instance (or a list of instances) that refers to the data in the database.
         Is called by load_influxdb and save_influxdb
@@ -244,9 +272,15 @@ class InfluxDBProfileManager(ProfileManager):
                 database=self.database_settings.database,
                 measurement=measurement,
                 field=field,
-                filters=InfluxDBProfileManager._create_esdl_filters_from_tags_dict(tags),
-                startDate=EDate.from_string(self.start_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
-                endDate=EDate.from_string(self.end_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f%z')),
+                filters=InfluxDBProfileManager._create_esdl_filters_from_tags_dict(
+                    tags
+                ),
+                startDate=EDate.from_string(
+                    self.start_datetime.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+                ),
+                endDate=EDate.from_string(
+                    self.end_datetime.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+                ),
             )
             profile_list.append(esdl_profile)
 
@@ -267,13 +301,19 @@ class InfluxDBProfileManager(ProfileManager):
         """
         json_body = []
         if not measurement or measurement == "":
-            raise NoDataException("Measurement name is not specified, so no data can be written to InfluxDB")
+            raise NoDataException(
+                "Measurement name is not specified, so no data can be written to InfluxDB"
+            )
         if not field_names:
-            raise NoDataException("No field names are specified, so no data can be written to InfluxDB")
+            raise NoDataException(
+                "No field names are specified, so no data can be written to InfluxDB"
+            )
         if tags and not isinstance(tags, dict):
-            raise WrongTagsFormatException("The tags parameter should be a dictionary with tag names as keys")
+            raise WrongTagsFormatException(
+                "The tags parameter should be a dictionary with tag names as keys"
+            )
         for profile_row in self.profile_data_list:
-            dt_string = profile_row[0].strftime('%Y-%m-%dT%H:%M:%S%z')
+            dt_string = profile_row[0].strftime("%Y-%m-%dT%H:%M:%S%z")
             fields = {}
             for fld_name in field_names:
                 if fld_name in self.profile_header:
@@ -285,18 +325,18 @@ class InfluxDBProfileManager(ProfileManager):
                     )
 
             if fields:
-                data = {
-                    "measurement": measurement,
-                    "time": dt_string,
-                    "fields": fields
-                }
+                data = {"measurement": measurement, "time": dt_string, "fields": fields}
                 if tags:
                     data["tags"] = tags
 
                 json_body.append(data)
 
         if json_body:
-            self.influxdb_client.write_points(points=json_body, database=self.database_settings.database, batch_size=100)
+            self.influxdb_client.write_points(
+                points=json_body,
+                database=self.database_settings.database,
+                batch_size=100,
+            )
             return self.get_esdl_influxdb_profile(measurement, field_names, tags)
 
         else:
@@ -305,14 +345,17 @@ class InfluxDBProfileManager(ProfileManager):
 
 class NoDataException(Exception):
     """Thrown when no profile data can be written to InfluxDB"""
+
     pass
 
 
 class WrongFilterFormatException(Exception):
     """Thrown when filter specification in ESDL profile cannot be parsed"""
+
     pass
 
 
 class WrongTagsFormatException(Exception):
     """Thrown when the tags parameter has the wrong structure"""
+
     pass
