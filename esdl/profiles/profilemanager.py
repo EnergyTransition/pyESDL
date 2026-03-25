@@ -32,6 +32,7 @@ class ProfileType(str, Enum):
     """
     Different profile types
     """
+
     UNKNOWN = "UNKNOWN"
     # SINGLE_VALUE = "SINGLE_VALUE"
     # VALUE_LIST = "VALUE_LIST"
@@ -46,7 +47,9 @@ class ProfileManager:
     """
 
     def __init__(self, source_profile: "ProfileManager" = None):
-        self.profile_header: List[str] | None = None  # in case of CSV or Excel based profile data
+        self.profile_header: List[str] | None = (
+            None  # in case of CSV or Excel based profile data
+        )
         self.profile_data_list: List[List[Any]] = []
         self.profile_type: ProfileType = ProfileType.UNKNOWN
         self.start_datetime: Optional[datetime] = None
@@ -84,16 +87,22 @@ class ProfileManager:
     def _check_data_format_and_size(self, profile_header, profile_data_list):
         num_columns = len(profile_header)
         if num_columns < 2:
-            raise UnsupportedProfileInputDataException("profile_header should contain at least two items, " +
-                                                       "a datetime column and at least one value column")
+            raise UnsupportedProfileInputDataException(
+                "profile_header should contain at least two items, "
+                + "a datetime column and at least one value column"
+            )
 
         for row in profile_data_list:
             if len(row) != num_columns:
-                raise UnsupportedProfileInputDataException("one or more rows in profile_data_list don't contain the " +
-                                                           "same amount of columns as the profile_header")
+                raise UnsupportedProfileInputDataException(
+                    "one or more rows in profile_data_list don't contain the "
+                    + "same amount of columns as the profile_header"
+                )
             if not isinstance(row[0], datetime):
-                raise UnsupportedProfileInputDataException("first element in one or more rows in profile_data_list " +
-                                                           "is not of type datetime")
+                raise UnsupportedProfileInputDataException(
+                    "first element in one or more rows in profile_data_list "
+                    + "is not of type datetime"
+                )
 
     def set_profile(self, profile_header, profile_data_list, profile_type: ProfileType):
         """
@@ -108,8 +117,8 @@ class ProfileManager:
         self._check_data_format_and_size(profile_header, profile_data_list)
 
         self.profile_header = profile_header
-        if self.profile_header[0] != 'datetime':
-            self.profile_header[0] = 'datetime'
+        if self.profile_header[0] != "datetime":
+            self.profile_header[0] = "datetime"
         self.profile_data_list = profile_data_list
         self.profile_type = profile_type
 
@@ -136,7 +145,7 @@ class ProfileManager:
         except:
             # If format cannot be determined automatically, try ; as a default
             csv_file = codecs.open(file_path, encoding=encoding)
-            reader = csv.reader(csv_file, delimiter=';')
+            reader = csv.reader(csv_file, delimiter=";")
 
         self.profile_header = next(reader)
         self.num_profile_items = 0
@@ -145,25 +154,32 @@ class ProfileManager:
         for row in reader:
             try:
                 dt = parse_date(row[0])
-            except ValueError:  # ValueError: row in CSV doesn't start with recognizable datetime value, ignore row
+            except (
+                ValueError
+            ):  # ValueError: row in CSV doesn't start with recognizable datetime value, ignore row
                 continue
 
             try:
-                aware_dt = pytz.utc.localize(dt)  # Assume timezone is UTC if no TZ was given
+                aware_dt = pytz.utc.localize(
+                    dt
+                )  # Assume timezone is UTC if no TZ was given
             except ValueError:  # ValueError: No naive datetime (tzinfo is already set)
                 aware_dt = dt
             row[0] = aware_dt
             for elem_idx in range(1, len(row)):
                 try:
-                    row[elem_idx] = locale.atof(row[elem_idx])      # Assume float values
+                    row[elem_idx] = locale.atof(row[elem_idx])  # Assume float values
                 except Exception as e:
-                    raise Exception(f"Cannot parse profile value in CSV ({row[elem_idx]})")
+                    raise Exception(
+                        f"Cannot parse profile value in CSV ({row[elem_idx]})"
+                    )
 
             if previous_datetime:
                 if previous_datetime == aware_dt:
                     raise DuplicateValueInProfileException(
-                        "CSV contains duplicate datetimes ({}). Check timezone and daylight saving".
-                        format(aware_dt.strftime('%Y-%m-%dT%H:%M:%S%z'))
+                        "CSV contains duplicate datetimes ({}). Check timezone and daylight saving".format(
+                            aware_dt.strftime("%Y-%m-%dT%H:%M:%S%z")
+                        )
                     )
             previous_datetime = aware_dt
 
@@ -182,20 +198,26 @@ class ProfileManager:
 
         :param esdl_profile: the ESDL profile object (only esdl.TimeSeriesProfile | esdl.DateTimeProfile is supported)
         """
-        if not isinstance(esdl_profile, esdl.TimeSeriesProfile) and not isinstance(esdl_profile, esdl.DateTimeProfile):
-            raise Exception("Profile types other than esdl.TimeSeriesProfile or esdl.DateTimeProfile are not "
-                            "supported yet. Use an InfluxDBProfile instance for esdl.InfluxDBProfile")
+        if not isinstance(esdl_profile, esdl.TimeSeriesProfile) and not isinstance(
+            esdl_profile, esdl.DateTimeProfile
+        ):
+            raise Exception(
+                "Profile types other than esdl.TimeSeriesProfile or esdl.DateTimeProfile are not "
+                "supported yet. Use an InfluxDBProfile instance for esdl.InfluxDBProfile"
+            )
 
         self.clear_profile()
         self.profile_type = ProfileType.DATETIME_LIST
 
-        name = esdl_profile.name if esdl_profile.name else 'NoName profile'
-        self.profile_header = ['datetime', name]
+        name = esdl_profile.name if esdl_profile.name else "NoName profile"
+        self.profile_header = ["datetime", name]
 
         if isinstance(esdl_profile, esdl.TimeSeriesProfile):
             self.start_datetime = esdl_profile.startDateTime
             try:
-                aware_dt = pytz.utc.localize(self.start_datetime)  # Assume timezone is UTC if no TZ was given
+                aware_dt = pytz.utc.localize(
+                    self.start_datetime
+                )  # Assume timezone is UTC if no TZ was given
             except ValueError:  # ValueError: No naive datetime (tzinfo is already set)
                 aware_dt = self.start_datetime
 
@@ -210,8 +232,12 @@ class ProfileManager:
                 for elem in esdl_profile.element:
                     dt = elem.from_
                     try:
-                        aware_dt = pytz.utc.localize(dt)  # Assume timezone is UTC if no TZ was given
-                    except ValueError:  # ValueError: No naive datetime (tzinfo is already set)
+                        aware_dt = pytz.utc.localize(
+                            dt
+                        )  # Assume timezone is UTC if no TZ was given
+                    except (
+                        ValueError
+                    ):  # ValueError: No naive datetime (tzinfo is already set)
                         aware_dt = dt
 
                     if self.start_datetime is None:
@@ -236,7 +262,7 @@ class ProfileManager:
             else:
                 raise UnknownProfileNameException("Unknown profile name")
         else:
-            return 1   # first element is datetime, second element is the default (or only) value
+            return 1  # first element is datetime, second element is the default (or only) value
 
     def get_esdl_datetime_profile(self, profile_name=None) -> esdl.DateTimeProfile:
         """
@@ -245,11 +271,13 @@ class ProfileManager:
         :param profile_name: the name of the column/profile (only necessary when multiple columns have been loaded)
         :return: the esdl.DateTimeProfile
         """
-        esdl.ProfileElement.from_.name = 'from'
-        setattr(esdl.ProfileElement, 'from', esdl.ProfileElement.from_)
+        esdl.ProfileElement.from_.name = "from"
+        setattr(esdl.ProfileElement, "from", esdl.ProfileElement.from_)
 
         if self.profile_type is ProfileType.UNKNOWN:
-            raise NoProfileLoadedExecption("Cannot create DateTimeProfile, no profile information is loaded")
+            raise NoProfileLoadedExecption(
+                "Cannot create DateTimeProfile, no profile information is loaded"
+            )
         profile_name_index = self.get_profile_name_index(profile_name)
 
         esdl_dt_profile = esdl.DateTimeProfile(id=str(uuid4()), name=profile_name)
@@ -259,7 +287,7 @@ class ProfileManager:
         for profile_row in self.profile_data_list:
             elem = esdl.ProfileElement(
                 from_=EDate.from_string(str(profile_row[0])),
-                value=profile_row[profile_name_index]
+                value=profile_row[profile_name_index],
             )
             esdl_dt_profile.element.append(elem)
 
@@ -273,7 +301,9 @@ class ProfileManager:
         :return: the esdl.TimeSeriesProfile
         """
         if self.profile_type is ProfileType.UNKNOWN:
-            raise NoProfileLoadedExecption("Cannot create TimeSeriesProfile, no profile information is loaded")
+            raise NoProfileLoadedExecption(
+                "Cannot create TimeSeriesProfile, no profile information is loaded"
+            )
         profile_name_index = self.get_profile_name_index(profile_name)
 
         esdl_ts_profile = esdl.TimeSeriesProfile(id=str(uuid4()), name=profile_name)
@@ -283,7 +313,11 @@ class ProfileManager:
 
         if self.num_profile_items > 1:
             # Assume equidistant profile values for now
-            esdl_ts_profile.timestep = int((self.profile_data_list[1][0]-self.profile_data_list[0][0]).total_seconds())
+            esdl_ts_profile.timestep = int(
+                (
+                    self.profile_data_list[1][0] - self.profile_data_list[0][0]
+                ).total_seconds()
+            )
         else:
             esdl_ts_profile.timestep = 0
 
@@ -295,20 +329,24 @@ class ProfileManager:
 
 class NoProfileLoadedExecption(Exception):
     """Thrown when no profile information is loaded"""
+
     pass
 
 
 class UnknownProfileNameException(Exception):
     """Thrown when an unknown profile name is given"""
+
     pass
 
 
 class DuplicateValueInProfileException(Exception):
     """Thrown when input data for a profile contains duplicate datetime values, probably due to a timezone error with
     daylight saving"""
+
     pass
 
 
 class UnsupportedProfileInputDataException(Exception):
     """Thrown when input data for a profile is not recognized"""
+
     pass
