@@ -8,3 +8,5 @@ Profiles
    profile_manager
    excel_profile_manager
    influxdb_profile_manager
+   datatableprofile_manager
+   data_configurations/index

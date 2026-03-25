@@ -1,6 +1,64 @@
 Release notes
 =============
 
+Version 26.3
+------------
+- Add support for ESDL release 26.3
+- Add initial support for new DataTableProfiles using the DataTableProfileManager with a postgres backend. Allows to easily store CSV/Excel files in postgres and add these profiles to an ESDL
+
+Version 26.2
+------------
+- Add support for ESDL release 26.2
+
+Version 25.12
+-------------
+- Add functions to create QuantityAndUnit objects
+- Add unit conversion from gram to tonne and vice versa (e.g. kg to Mt)
+- Support setting PhysicalQuantity when using `build_qau_from_unit_string()`, e.g.
+  `build_qau_from_unit_string("TWh", 'Energy')`
+
+Version 25.7
+------------
+- Add support for ESDL release 25.7
+- Small bugfix in generating a QuantityAndUnitType instance from a string
+- Fix bug in unit conversion when physical quantities are not the same
+
+Version 25.5.2
+--------------
+- Fix bug in unit conversion when physical quantities are not the same
+
+Version 25.5.1
+--------------
+- Add support for ESDL release 25.5.1
+
+Version 25.5
+------------
+- Add support for ESDL release 25.5
+
+Version 25.2
+------------
+- Add support for ESDL release 25.2
+
+Version 24.11.2
+---------------
+- Add link to documentation of pyESDL on readthedocs
+- Fix geojson dependency 
+
+Version 24.11.1
+---------------
+- Downgrade pyEcore to 0.13.2 again, due to error with rows in tables
+
+Version 24.11
+-------------
+- Update build system and dependencies
+- Fix wrong import in `support_functions` on Python > 3.12
+- Update pyEcore to 0.15.1
+
+Version 24.9
+------------
+- Add support for ESDL release 24.09
+- Upgrade shapely and geojson versions
+
 Version 24.2
 ------------
 - Fix bug when no tags are given for an InfluxDBProfile
