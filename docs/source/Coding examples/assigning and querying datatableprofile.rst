@@ -1,15 +1,65 @@
 Assigning and querying a profile with DataTableProfile
 =======================================================
 
-The examples below demonstrate how to work with DataTableProfile for:
+The examples below demonstrate how to work with DataTableProfile and DataTableProfileManager for:
 
-1. Assigning a DataTableProfile to an asset port
-2. Querying profile data from a DataTableProfile
+1. Uploading profiles in a CSV file to a PostgreSQL database
+2. Assigning a DataTableProfile to an ESDL asset port
+3. Querying DataTableProfile profile data using DataTableProfileManager
 
-Example 1 - Assigning a DataTableProfile to an asset port
----------------------------------------------------------
+Example 1 - Uploading profiles in a CSV file to a PostgreSQL database
+---------------------------------------------------------------------
 
-The example demonstrates the workflow for creating and assigning a DataTableProfile to an asset port.
+The example demonstrates the workflow for uploading profiles stored in a CSV file with the following format to a PostgreSQL database.
+
+.. code-block:: text
+
+    datetime;SpaceHeat_and_HotWater_PowerProfile_2000_2010;SpaceHeat_and_HotWater_PowerProfile_1900_2000
+    2018-12-31 23:00;0.050329049;0.050833629
+    2019-01-01 0:00;0.019461529;0.026052364
+    2019-01-01 1:00;0.005371142;0.020082353
+    2019-01-01 2:00;0.002531358;0.035270293
+    ...
+    2019-12-31 21:00;0.234917204;0.243590629
+    2019-12-31 22:00;0.114569593;0.134043254
+
+.. code-block:: python
+
+    from esdl.support_functions import deepcopy
+    from esdl.units.conversion import POWER_IN_MW
+
+    # Create a new datatable profile with data from e.g. CSV or Excel
+    # Assign a DataTableProfile tableName, so the uploaded profiles will be saved to the corresponding table.
+    dtp = esdl.DataTableProfile(tableName="Space Heat default profiles")
+    dtp.configuration = esdl.FileConfiguration(
+        uri="test_profiles.csv", type=esdl.FileTypeEnum.CSV
+    )
+    dtpman = DataTableProfileManager.load(dtp)
+
+    print(dtpman.profile_header)
+
+    # Add profile QaU
+    dtp.profileQuantityAndUnit = deepcopy(POWER_IN_MW)
+
+    # Store this in Postgres by creating a new configuration
+    # The database must exist or have been created; otherwise, an error will be thrown.
+    dtp.configuration = esdl.DatabaseConfiguration(
+        type=esdl.DatabaseTypeEnum.POSTGRESQL,
+        id="my_database_id",
+        database="energy_profiles",
+        host="localhost",
+        port=5432,
+    )
+    cred = Credentials.create_dict("my_database_id", "postgres", "password")
+
+    # Save data in database configured in dtp.configuration
+    dtpman.save(cred)
+
+
+Example 2 - Assigning a DataTableProfile to an ESDL asset port
+--------------------------------------------------------------
+
+The example demonstrates the workflow for creating and assigning a DataTableProfile to an ESDL asset port.
 
 .. note::
     This example shows an explicit workflow that stores quantity/unit and database configuration in EnergySystemInformation before
@@ -187,8 +237,8 @@ The output ESDL would look like below.
     </esdl:EnergySystem>
 
 
-Example 2 - Querying a profile data from a DataTableProfile
------------------------------------------------------------
+Example 3 - Querying DataTableProfile profile data using DataTableProfileManager
+--------------------------------------------------------------------------------
 
 The example demonstrates the workflow for querying profile data from a DataTableProfile in an ESDL.
 
@@ -278,3 +328,29 @@ To have the maximum flexibility with querying (e.g., for visualization purposes)
     else:
         for data in profile_values[:10]:
             print(data)
+
+To retrieve and cache all profiles stored within the same database table via skipping :code:`columnName`
+
+.. code-block:: python
+
+    print("-------------- load and cache all profiles from the same db table ------------------")
+
+    # Only specify the tableName but skip columnName to load all profiles from the same table
+    dtp = esdl.DataTableProfile(tableName="Space Heat default profiles")
+    dtp.configuration = esdl.DatabaseConfiguration(
+        type=esdl.DatabaseTypeEnum.POSTGRESQL,
+        id="my_database_id",
+        database="energy_profiles",
+        host="localhost",
+        port=5432,
+    )
+
+    dtpm = DataTableProfileManager(dtp)
+    cred_dict = Credentials.create_dict("my_database_id", "postgres", "password")
+    dtpm.load_database_configuration(credentials_dict=cred_dict)
+
+    print(dtpm.profile_header)
+
+    raw_data = dtpm.profile_data_list
+    for data in raw_data[:10]:
+        print(data)

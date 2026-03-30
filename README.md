@@ -114,6 +114,10 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 ## Changes
 
+## Version 26.3.2
+- Fix bug of table index creation error in postgresql configuration
+- Extend coding examples of DataTableProfile in the readthedocs documentation
+
 ## Version 26.3.1
 - Update readthedocs documentation related to DataTableProfileManager API and a coding example of assigning and querying a profile with DataTableProfile
 

@@ -456,8 +456,11 @@ class PostgresqlConfiguration:
                 print(query.as_string(cursor))
             cursor.execute(query)
             # create index on table datetime column
-            sql_string = r"CREATE INDEX IF NOT EXISTS {table}_metadata_datetime_idx ON {table} USING btree ({column_name})"
+            sql_string = r"CREATE INDEX IF NOT EXISTS {index_name} ON {table} USING btree ({column_name})"
             query = sql.SQL(sql_string).format(
+                index_name=sql.Identifier(
+                    f"{self.datatable_profile.tableName}_metadata_datetime_idx"
+                ),
                 table=table,
                 column_name=sql.Identifier(self.datatable_profile.datetimeColumnName),
             )
