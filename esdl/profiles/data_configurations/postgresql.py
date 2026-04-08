@@ -66,7 +66,7 @@ class PostgresqlConfiguration:
                 credential = credentials_dict.get(configuration.host, None)
                 if credential is None:
                     raise InvalidCredentials(
-                        f"DataConfiguration '{configuration.id}' is has no associated credentials"
+                        f"DataConfiguration '{configuration.id}' has no associated credentials"
                         f" to use for connecting to the Postgres database"
                     )
 

@@ -114,8 +114,9 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 ## Changes
 
-## Version 26.3.2
+## Version 26.4
 - Fix bug of table index creation error in postgresql configuration
+- Add initial support for loading DataTableProfile data with profiles stored in InfluxDB database using DataTableProfileManager
 - Extend coding examples of DataTableProfile in the readthedocs documentation
 
 ## Version 26.3.1

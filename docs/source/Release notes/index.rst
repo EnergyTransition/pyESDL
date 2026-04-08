@@ -1,6 +1,12 @@
 Release notes
 =============
 
+Version 26.4
+------------
+- Fix bug of table index creation error in postgresql configuration
+- Add initial support for loading DataTableProfile data with profiles stored in InfluxDB database using DataTableProfileManager
+- Extend coding examples of DataTableProfile in the readthedocs documentation
+
 Version 26.3.1
 --------------
 - Update readthedocs documentation related to DataTableProfileManager API and a coding example of assigning and querying a profile with DataTableProfile
