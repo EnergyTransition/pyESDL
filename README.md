@@ -114,6 +114,9 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 ## Changes
 
+## Version 26.4
+- Updated python dependencies for geometry and profiles functionalities (Python 3.10, 3.11, 3.12, 3.13, 3.14)
+
 ## Version 26.3.1
 - Update readthedocs documentation related to DataTableProfileManager API and a coding example of assigning and querying a profile with DataTableProfile
 
