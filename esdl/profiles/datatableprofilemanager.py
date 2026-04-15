@@ -15,6 +15,7 @@ from os import environ
 from typing import Dict, List, Any, Tuple, Optional
 from datetime import datetime
 from uuid import uuid4
+import logging
 
 from pyecore.ecore import EDate
 
@@ -129,38 +130,45 @@ class DataTableProfileManager(ProfileManager):
         elif configuration.type == esdl.DatabaseTypeEnum.INFLUXDB:
             credential = credentials_dict.get(configuration.id, None)
             if credential is None:
-                raise InvalidInfluxDBCredentials(
-                    f"DataConfiguration '{configuration.id}' has no associated credentials"
-                    f" to use for connecting to the InfluxDB database"
-                )
+                # try on host name
+                credential = credentials_dict.get(configuration.host, None)
+                if credential is None:
+                    logging.warning(
+                        f"No associated credentials found from DataConfiguration.id '{configuration.id}' or DataConfiguration.host '{configuration.host}'."
+                        f" Assuming a public InfluxDB database and attempting to connect without credentials."
+                    )
 
             settings = ConnectionSettings(
                 host=configuration.host,
                 port=configuration.port,
-                username=credential.username,
-                password=credential.password,
+                username=credential.username if credential else "",
+                password=credential.password if credential else "",
                 database=configuration.database,
                 ssl=configuration.tls or False,
                 verify_ssl=configuration.tls or False,
             )
 
-            influxdb_pm = InfluxDBProfileManager(settings)
-            influxdb_pm.load_influxdb(
-                measurement=self.data_table_profile.tableName,
-                fields=(
-                    [self.data_table_profile.columnName]
-                    if self.data_table_profile.columnName
-                    else []
-                ),
-                from_datetime=self.data_table_profile.startDate,
-                to_datetime=self.data_table_profile.endDate,
-                filters=InfluxDBProfileManager._parse_esdl_profile_filters(
-                    self.data_table_profile.filter
-                ),
-            )
+            try:
+                influxdb_pm = InfluxDBProfileManager(settings)
+                influxdb_pm.load_influxdb(
+                    measurement=self.data_table_profile.tableName,
+                    fields=(
+                        [self.data_table_profile.columnName]
+                        if self.data_table_profile.columnName
+                        else []
+                    ),
+                    from_datetime=self.data_table_profile.startDate,
+                    to_datetime=self.data_table_profile.endDate,
+                    filters=InfluxDBProfileManager._parse_esdl_profile_filters(
+                        self.data_table_profile.filter
+                    ),
+                )
 
-            # Copies all data loaded in the influxdb_pm instance into ProfileManager instance
-            self.convert(influxdb_pm)
+                # Copies all data loaded in the influxdb_pm instance into ProfileManager instance
+                self.convert(influxdb_pm)
+            except Exception as e:
+                logging.error(e)
+                raise InfluxDBProfileLoadError("Fail to load profile from InfluxDB.")
         else:
             raise UnsupportedDataConfiguration(
                 f"DataConfiguration of type {configuration.type.name} is not yet supported"
@@ -500,6 +508,11 @@ class InvalidDataConfiguration(Exception):
 
 class InvalidInfluxDBCredentials(Exception):
     """Thrown when no credentials are provided for connecting to InfluxDB."""
+
+    pass
+
+class InfluxDBProfileLoadError(Exception):
+    """Thrown when failing to load profile from InfluxDB."""
 
     pass
 
