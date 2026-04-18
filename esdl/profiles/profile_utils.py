@@ -14,12 +14,12 @@ from esdl import (
 from esdl.profiles.datatableprofilemanager import DataTableProfileManager
 from esdl.profiles.profilemanager import ProfileManager
 
-profile_data_cache: dict[str, tuple[Any, list[Any]]] = {}
+profile_data_cache: dict[str, tuple[list[Any]]] = {}
 
 
 def _create_profile_cache_key(
     config_id: str,
-    table_name: str | None,
+    table_name: str,
     column_name: str | None,
     start_date: Any | None,
     end_date: Any | None,
@@ -31,7 +31,7 @@ def _create_profile_cache_key(
     ----------
     config_id : str
         The configuration id.
-    table_name : str | None
+    table_name : str
         The table name, or None.
     column_name : str | None
         The column name, or None.
@@ -45,7 +45,7 @@ def _create_profile_cache_key(
     str
         A unique profile cache key.
     """
-    table_part = table_name if table_name is not None else ""
+    table_part = table_name
     column_part = column_name if column_name is not None else ""
     start_part = str(start_date) if start_date is not None else ""
     end_part = str(end_date) if end_date is not None else ""
@@ -108,15 +108,15 @@ def get_time_varying_profile_header_and_raw_data(
     Retrieve the profile header and data list for a given profile with time varying data:
         DataTableProfile, InfluxDBProfile, TimeSeriesProfile, DateTimeProfile or ProfileReference.
 
-    Converts InfluxDBProfile to DataTableProfile if necessary, then loads data for PostgreSQL profiles.
-    Profile data can be cached to avoid requerying the same table/column combinations. or
+    Converts InfluxDBProfile to DataTableProfile if necessary.
+    Profile data can be cached for database profiles to avoid requerying the same data.
 
     Parameters
     ----------
     profile : GenericProfile
         The profile to process.
     enable_cache : bool, optional
-        Whether to cache profile data, by default True.
+        Whether to cache profile data for database profiles, by default False.
 
     Returns
     -------
@@ -127,31 +127,23 @@ def get_time_varying_profile_header_and_raw_data(
         profile = _get_referenced_profile(profile)
 
     if isinstance(profile, (DataTableProfile, InfluxDBProfile)):
-        if isinstance(profile, DataTableProfile):
-            tableName = profile.tableName
-            columnName = profile.columnName
-            dtp = profile
-        elif isinstance(profile, InfluxDBProfile):
-            tableName = profile.measurement
-            columnName = profile.field
-            dtp = _influxdbprofile_to_datatableprofile(profile)
-
+        dtp = profile if isinstance(profile, DataTableProfile) else _influxdbprofile_to_datatableprofile(profile)
         dtp_manager = DataTableProfileManager(dtp)
 
         if enable_cache:
             cache_key = _create_profile_cache_key(
-                dtp.configuration.id, tableName, columnName, dtp.startDate, dtp.endDate
+                dtp.configuration.id, dtp.tableName, dtp.columnName, dtp.startDate, dtp.endDate
             )
             if cache_key in profile_data_cache:  # return cached profile
                 return profile_data_cache[cache_key]
 
         # load from database
-        dtp_manager.load_database_configuration()
+        dtp_manager.load_from_database()
         header = dtp_manager.profile_header
         data_list = dtp_manager.profile_data_list
 
         if enable_cache:  # store in cache
-            profile_data_cache[cache_key] = (header, data_list)
+            profile_data_cache[cache_key] = (data_list, header)
     elif isinstance(profile, (TimeSeriesProfile, DateTimeProfile)):
         profile_manager = ProfileManager()
         profile_manager.parse_esdl(profile)
@@ -160,4 +152,4 @@ def get_time_varying_profile_header_and_raw_data(
     else:
         raise NotImplementedError(f"Unsupported profile (id={profile.id}) class: {type(profile).__name__}")
 
-    return header, data_list
+    return data_list, header

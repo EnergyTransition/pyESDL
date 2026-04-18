@@ -13,7 +13,6 @@
 #      TNO
 import logging
 from datetime import datetime
-from os import environ
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
@@ -21,7 +20,7 @@ from pyecore.ecore import EDate
 
 import esdl
 from esdl import DataTableProfile
-from esdl.profiles.data_configurations.credentials import Credentials
+from esdl.profiles.credentials import Credentials
 from esdl.profiles.data_configurations.postgresql import (
     DataTableMetaData,
     PostgresqlConfiguration,
@@ -37,16 +36,6 @@ from esdl.profiles.profilemanager import (
     ProfileType,
 )
 
-global_credentials: Dict[str, Credentials] = {}
-
-# add a default credential based on hostname based on environmental variables
-if environ.get("DB_HOST", None):
-    host = environ.get("DB_HOST", "localhost")
-    global_credentials[host] = Credentials(
-        username=environ.get("DB_USER", None), password=environ.get("DB_PASSWORD", None)
-    )
-    print(f"Detected DB credentials for {host}")
-
 
 class DataTableProfileManager(ProfileManager):
     """
@@ -57,6 +46,8 @@ class DataTableProfileManager(ProfileManager):
 
     data_table_profile: esdl.DataTableProfile
     metadata: List[DataTableMetaData]
+    _postgres_connections: Dict[tuple, PostgresqlConfiguration] = dict()
+    _influxdb_connections: Dict[tuple, InfluxDBProfileManager] = dict()
 
     def __init__(self, data_table_profile: esdl.DataTableProfile | None = None, source_profile=None):
         """
@@ -77,44 +68,73 @@ class DataTableProfileManager(ProfileManager):
         if source_profile:
             self.convert(source_profile)
 
-    @staticmethod
-    def add_credentials(credentials_dict: Dict[str, Credentials]):
-        """
-        Add or update database credentials for DataTableProfile connections.
-
-        Credentials are matched against DataTableProfile configurations using the following priority:
-        1. Configuration ID (from esdl.DatabaseConfiguration.id)
-        2. Host:Port combination (if port is specified, e.g., "localhost:5432")
-        3. Host name (e.g., "localhost")
-
-        :param credentials_dict: Dictionary mapping connection identifiers to Credentials objects.
-                                 Keys can be configuration IDs, "host:port" strings, or hostnames.
-                                 Values are Credentials objects with username and password.
-                                 Username and password can be None or empty string to use default
-                                 PostgreSQL authentication (e.g., peer authentication, environment variables).
-
-        Example:
-            >>> creds = Credentials.create_dict("db_config_1", "user1", "pass1")
-            >>> creds.update(Credentials.create_dict("localhost:5433", "user2", "pass2"))
-            >>> DataTableProfileManager.add_credentials(creds)
-        """
-        global_credentials.update(credentials_dict)
-
     def set_data_table_profile(self, data_table_profile: esdl.DataTableProfile):
         self.data_table_profile = data_table_profile
 
-    def load_database_configuration(
-        self,
-        configuration: esdl.DatabaseConfiguration | None = None,
-        credentials_dict: dict[str, Credentials] | None = None,
-    ):
+    @staticmethod
+    def _get_postgres_cache_key(data_table_profile: esdl.DataTableProfile) -> tuple:
+        configuration = data_table_profile.configuration
+        credential = Credentials.get_credential(configuration)
+        username = credential.username if credential and credential.username else ""
+        password = credential.password if credential and credential.password else ""
+        return (
+            configuration.host,
+            configuration.port or 5432,
+            configuration.database,
+            username,
+            password,
+        )
+
+    @classmethod
+    def _get_postgres_connection(cls, data_table_profile: esdl.DataTableProfile) -> PostgresqlConfiguration:
+        cache_key = cls._get_postgres_cache_key(data_table_profile)
+        postgres = cls._postgres_connections.get(cache_key)
+
+        if postgres is None or postgres.connection is None or postgres.connection.closed:
+            postgres = PostgresqlConfiguration(data_table_profile)
+            cls._postgres_connections[cache_key] = postgres
+        else:
+            postgres.datatable_profile = data_table_profile
+
+        return postgres
+
+    @staticmethod
+    def _get_influx_cache_key(settings: ConnectionSettings) -> tuple:
+        host = settings.host.replace("http://", "").replace("https://", "")
+        return (
+            host,
+            settings.port,
+            settings.username,
+            settings.password,
+            settings.database,
+            settings.ssl,
+            settings.verify_ssl,
+        )
+
+    @classmethod
+    def _get_influxdb_connection(cls, settings: ConnectionSettings) -> InfluxDBProfileManager:
+        cache_key = cls._get_influx_cache_key(settings)
+        influxdb_pm = cls._influxdb_connections.get(cache_key)
+
+        if influxdb_pm is None:
+            influxdb_pm = InfluxDBProfileManager(settings)
+            cls._influxdb_connections[cache_key] = influxdb_pm
+
+        return influxdb_pm
+
+    @classmethod
+    def clear_connection_cache(cls):
+        for postgres in cls._postgres_connections.values():
+            postgres.disconnect()
+        cls._postgres_connections.clear()
+        cls._influxdb_connections.clear()
+
+    def load_from_database(self, configuration: esdl.DatabaseConfiguration | None = None):
         """
-        Loads profile data from a database configuration into
-        profile_info and profile_header
+        Loads profile data from a database configuration into profile_header and profile_data_list.
 
         :param configuration: the database configuration, optional, otherwise
                             the one provided in the constructor is used
-        :param credentials_dict: optional credentials dict to use to connect to the database
         :return: None
         """
         if not configuration:
@@ -122,32 +142,13 @@ class DataTableProfileManager(ProfileManager):
         if not configuration:
             raise InvalidDataConfiguration("Missing configuration of DataTableProfile")
 
-        if not credentials_dict:
-            credentials_dict = global_credentials
-
         self.clear_profile()
         self.profile_type = ProfileType.DATETIME_LIST
 
-        # get credentials, first try on id of configuration
-        credentials = credentials_dict.get(configuration.id, None)
-        if credentials is None and configuration.port is not None:
-            # try on host:port
-            credentials = credentials_dict.get(f"{configuration.host}:{configuration.port}", None)
-        if credentials is None:
-            # try on host
-            credentials = credentials_dict.get(configuration.host, None)
-
-        if credentials is None:
-            logging.warning(
-                f"No associated credentials found from DataConfiguration.id '{configuration.id}' or DataConfiguration.host '{configuration.host}'."
-                f" Assuming a public database and attempting to connect without credentials."
-            )
-
         if configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
             # handle postgres
-            postgres = PostgresqlConfiguration(self.data_table_profile, credentials)
+            postgres = self._get_postgres_connection(self.data_table_profile)
             self.profile_data_list, self.profile_header, self.metadata = postgres.load_data()
-            postgres.disconnect()
             if len(self.profile_data_list) > 0:
                 self.num_profile_items = len(self.profile_data_list[0])
                 if self.num_profile_items > 0:
@@ -155,18 +156,19 @@ class DataTableProfileManager(ProfileManager):
                     self.start_datetime = self.profile_data_list[0][dt_index]
                     self.end_datetime = self.profile_data_list[-1][dt_index]
         elif configuration.type == esdl.DatabaseTypeEnum.INFLUXDB:
+            credential = Credentials.get_credential(configuration)
             settings = ConnectionSettings(
                 host=configuration.host,
                 port=configuration.port,
-                username=credentials.username if credentials else "",
-                password=credentials.password if credentials else "",
+                username=credential.username if credential and credential.username else "",
+                password=credential.password if credential and credential.password else "",
                 database=configuration.database,
-                ssl=configuration.tls or False,
+                ssl="https" in configuration.host or configuration.port == 443,
                 verify_ssl=configuration.tls or False,
             )
 
             try:
-                influxdb_pm = InfluxDBProfileManager(settings)
+                influxdb_pm = self._get_influxdb_connection(settings)
                 influxdb_pm.load_influxdb(
                     measurement=self.data_table_profile.tableName,
                     fields=([self.data_table_profile.columnName] if self.data_table_profile.columnName else []),
@@ -179,7 +181,7 @@ class DataTableProfileManager(ProfileManager):
                 self.convert(influxdb_pm)
             except Exception as e:
                 logging.error(e)
-                raise InfluxDBProfileLoadError("Fail to load profile from InfluxDB.")
+                raise InfluxDBProfileLoadError(f"Failed to load from InfluxDB: {e}")
         else:
             raise UnsupportedDataConfiguration(
                 f"DataConfiguration of type {configuration.type.name} is not yet supported"
@@ -237,7 +239,6 @@ class DataTableProfileManager(ProfileManager):
     @staticmethod
     def load(
         data_table_profile: esdl.DataTableProfile,
-        credentials_dict: dict[str, Credentials] = None,
     ) -> "DataTableProfileManager":
         """
         Static method to create an instance of DataTableProfileManager using an esdl.DataTableProfile. The data
@@ -245,16 +246,10 @@ class DataTableProfileManager(ProfileManager):
         (e.g. DatabaseConfiguration or FileConfiguration)
 
         :param data_table_profile: esdl.DataTableProfile that is used as an input profile
-        :param credentials_dict: dictionary of credentials to use for authentication with ['id' -> Credentials] mapping,
-         where 'id' refers to the id of the AbstractDataConfiguration that belongs to these credentials
 
         Note:
         - for FileConfigurations: uri without extension is used as tableName for CSV files if no tableName is given
         """
-
-        if not credentials_dict:
-            # use global credentials list
-            credentials_dict = global_credentials
 
         configuration = data_table_profile.configuration
 
@@ -262,7 +257,7 @@ class DataTableProfileManager(ProfileManager):
             raise InvalidDataConfiguration("No DataConfiguration provided")
         if isinstance(configuration, esdl.DatabaseConfiguration):
             dtpman = DataTableProfileManager(data_table_profile)
-            dtpman.load_database_configuration(configuration, credentials_dict)
+            dtpman.load_from_database(configuration)
             return dtpman
         elif isinstance(configuration, esdl.FileConfiguration):
             if configuration.type == esdl.FileTypeEnum.EXCEL:
@@ -290,7 +285,6 @@ class DataTableProfileManager(ProfileManager):
     @staticmethod
     def query(
         data_table_profile: esdl.DataTableProfile,
-        credentials_dict: Optional[Dict[str, Credentials]],
         table_name: str,
         column_name: str,
         schema: Optional[str] = None,
@@ -311,7 +305,6 @@ class DataTableProfileManager(ProfileManager):
         to the caller.
 
         :param data_table_profile: The esdl.DataTableProfile describing the data source and default query parameters.
-        :param credentials_dict: Optional mapping of configuration ID → Credentials. If None, global credentials are used.
         :param table_name: Name of the database table to query.
         :param column_name: Name of the single value column to retrieve.
         :param schema: Optional schema name. If None, the default schema is used.
@@ -326,14 +319,11 @@ class DataTableProfileManager(ProfileManager):
         :return: Tuple with: List of data (column-based if configured), header names,
                 QuantityAndUnit if available for each header
         """
-        if not credentials_dict:
-            # use global credentials list
-            credentials_dict = global_credentials
 
         configuration = data_table_profile.configuration
         if isinstance(configuration, esdl.DatabaseConfiguration):
             if configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
-                postgres = PostgresqlConfiguration(data_table_profile, credentials_dict)
+                postgres = DataTableProfileManager._get_postgres_connection(data_table_profile)
 
                 dt_column_name = (
                     datetime_column_name if datetime_column_name is not None else data_table_profile.datetimeColumnName
@@ -352,7 +342,6 @@ class DataTableProfileManager(ProfileManager):
                     column_based=column_based,
                 )
                 qaus = [m.qau for m in metadata]
-                postgres.disconnect()
                 return profile_data_list, profile_header, qaus
             elif configuration.type == esdl.DatabaseTypeEnum.INFLUXDB:
                 # TODO: support Influxdb
@@ -436,22 +425,17 @@ class DataTableProfileManager(ProfileManager):
     #     """
     #     pass
 
-    def save(self, credentials_dict: dict[str, Credentials] = None, drop=True):
+    def save(self, drop=True):
         """
         Saves the current datatable profile to the database
 
-        :param credentials_dict: Dict with Credentials to connect to the database, or use global defined credentials
         :param drop: Drop data in the referenced table before writing data (default=True)
         """
 
-        if not credentials_dict:
-            credentials_dict = global_credentials
-
         if self.data_table_profile.configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
             # handle postgres
-            postgres = PostgresqlConfiguration(self.data_table_profile, credentials_dict)
+            postgres = self._get_postgres_connection(self.data_table_profile)
             postgres.save_data(self.profile_data_list, self.profile_header, overwrite=drop)
-            postgres.disconnect()
         elif self.data_table_profile.configuration.type == esdl.DatabaseTypeEnum.INFLUXDB:
             # TODO: support InfluxDB
             raise UnsupportedDataConfiguration(
@@ -477,12 +461,6 @@ class WrongFilterFormatException(Exception):
 
 class InvalidDataConfiguration(Exception):
     """Thrown when there is no or invalid DataConfiguration"""
-
-    pass
-
-
-class InvalidInfluxDBCredentials(Exception):
-    """Thrown when no credentials are provided for connecting to InfluxDB."""
 
     pass
 

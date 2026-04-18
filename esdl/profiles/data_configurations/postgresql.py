@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from datetime import datetime
 from logging import error, warning
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import psycopg
 from psycopg import Connection, sql
 
 from esdl import QuantityAndUnitType, esdl
-from esdl.profiles.data_configurations.credentials import Credentials
+from esdl.profiles.credentials import Credentials
 from esdl.units.parser import build_qau_from_unit_string, unit_to_string
 
 # table name used for storing metadata that is not in the table
@@ -41,14 +41,9 @@ class PostgresqlConfiguration:
     connection: Connection | None
     datatable_profile: esdl.DataTableProfile
 
-    def __init__(
-        self,
-        datatable_profile: esdl.DataTableProfile,
-        credentials: Credentials | None = None,
-    ):
+    def __init__(self, datatable_profile: esdl.DataTableProfile):
         self.datatable_profile = datatable_profile
         self.connection: Connection | None = None
-        self.credentials = credentials
         self._connect_postgres(datatable_profile)
 
     def _connect_postgres(
@@ -69,9 +64,10 @@ class PostgresqlConfiguration:
                 "port": configuration.port or 5432,
                 "dbname": configuration.database,
             }
-            if self.credentials and self.credentials.username and self.credentials.password:
-                connect_kwargs["user"] = self.credentials.username
-                connect_kwargs["password"] = self.credentials.password
+            credential = Credentials.get_credential(datatable_profile.configuration)
+            if credential and credential.username and credential.password:
+                connect_kwargs["user"] = credential.username
+                connect_kwargs["password"] = credential.password
 
             self.connection = psycopg.connect(**connect_kwargs)
         except Exception as e:
@@ -243,10 +239,10 @@ class PostgresqlConfiguration:
     @staticmethod
     def _build_where_clause(
         dt_ident,
-        start_date: Optional[datetime],
-        end_date: Optional[datetime],
-        additional_filters: Dict[str, Any] = None,
-    ) -> Tuple[Any, List]:
+        start_date: datetime | None,
+        end_date: datetime | None,
+        additional_filters: dict[str, Any] | None = None,
+    ) -> tuple[Any, list]:
         """
         A utility function to build a SQL WHERE clause for datetime range and simple equality filters.
 
@@ -284,8 +280,8 @@ class PostgresqlConfiguration:
 
     @staticmethod
     def _process_query_results(
-        cursor, result: List, datetime_column_name: str, column_based: bool
-    ) -> Tuple[List[List], List[str]]:
+        cursor, result: list, datetime_column_name: str, column_based: bool
+    ) -> tuple[list[list], list[str]]:
         """
         Reorder results so the datetime column is always first.
         Supports row-based or column-based output.
@@ -316,7 +312,7 @@ class PostgresqlConfiguration:
 
         return profile_values, header
 
-    def load_meta_data(self, column_name: str = None) -> None | DataTableMetaData:
+    def load_meta_data(self, column_name: str | None = None) -> None | DataTableMetaData:
         """
         Loads metadata from meta_data table
 
