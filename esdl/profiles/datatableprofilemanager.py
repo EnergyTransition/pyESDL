@@ -15,6 +15,7 @@ from os import environ
 from typing import Dict, List, Any, Tuple, Optional
 from datetime import datetime
 from uuid import uuid4
+import logging
 
 from pyecore.ecore import EDate
 
@@ -24,6 +25,10 @@ from esdl.profiles.data_configurations.credentials import Credentials
 from esdl.profiles.data_configurations.postgresql import (
     PostgresqlConfiguration,
     DataTableMetaData,
+)
+from esdl.profiles.influxdbprofilemanager import (
+    InfluxDBProfileManager,
+    ConnectionSettings,
 )
 from esdl.profiles.excelprofilemanager import ExcelProfileManager
 from esdl.profiles.profilemanager import (
@@ -122,6 +127,48 @@ class DataTableProfileManager(ProfileManager):
                     )
                     self.start_datetime = self.profile_data_list[0][dt_index]
                     self.end_datetime = self.profile_data_list[-1][dt_index]
+        elif configuration.type == esdl.DatabaseTypeEnum.INFLUXDB:
+            credential = credentials_dict.get(configuration.id, None)
+            if credential is None:
+                # try on host name
+                credential = credentials_dict.get(configuration.host, None)
+                if credential is None:
+                    logging.warning(
+                        f"No associated credentials found from DataConfiguration.id '{configuration.id}' or DataConfiguration.host '{configuration.host}'."
+                        f" Assuming a public InfluxDB database and attempting to connect without credentials."
+                    )
+
+            settings = ConnectionSettings(
+                host=configuration.host,
+                port=configuration.port,
+                username=credential.username if credential else "",
+                password=credential.password if credential else "",
+                database=configuration.database,
+                ssl=configuration.tls or False,
+                verify_ssl=configuration.tls or False,
+            )
+
+            try:
+                influxdb_pm = InfluxDBProfileManager(settings)
+                influxdb_pm.load_influxdb(
+                    measurement=self.data_table_profile.tableName,
+                    fields=(
+                        [self.data_table_profile.columnName]
+                        if self.data_table_profile.columnName
+                        else []
+                    ),
+                    from_datetime=self.data_table_profile.startDate,
+                    to_datetime=self.data_table_profile.endDate,
+                    filters=InfluxDBProfileManager._parse_esdl_profile_filters(
+                        self.data_table_profile.filter
+                    ),
+                )
+
+                # Copies all data loaded in the influxdb_pm instance into ProfileManager instance
+                self.convert(influxdb_pm)
+            except Exception as e:
+                logging.error(e)
+                raise InfluxDBProfileLoadError("Fail to load profile from InfluxDB.")
         else:
             raise UnsupportedDataConfiguration(
                 f"DataConfiguration of type {configuration.type.name} is not yet supported"
@@ -257,7 +304,7 @@ class DataTableProfileManager(ProfileManager):
         column_based: bool = False,
     ) -> Tuple[List[List[float]], List[str], List[esdl.QuantityAndUnitType]]:
         """
-        Query data from a PostgreSQL-backed DataTableProfile using the associated
+        Query and return data from a database using the associated
         DatabaseConfiguration. This method acts as the high-level API for retrieving
         profile data, applying optional filtering, scaling, and downsampling.
 
@@ -312,7 +359,10 @@ class DataTableProfileManager(ProfileManager):
                 return profile_data_list, profile_header, qaus
             elif configuration.type == esdl.DatabaseTypeEnum.INFLUXDB:
                 # TODO: support Influxdb
-                pass
+                raise UnsupportedDataConfiguration(
+                    f"DataConfiguration of type {configuration.type.name} "
+                    f"is not yet supported for direct querying"
+                )
             else:
                 raise UnsupportedDataConfiguration(
                     f"DataConfiguration of type {configuration.type.name} "
@@ -425,6 +475,13 @@ class DataTableProfileManager(ProfileManager):
                 self.profile_data_list, self.profile_header, overwrite=drop
             )
             postgres.disconnect()
+        elif (
+            self.data_table_profile.configuration.type == esdl.DatabaseTypeEnum.INFLUXDB
+        ):
+            # TODO: support InfluxDB
+            raise UnsupportedDataConfiguration(
+                f"DataConfiguration {self.data_table_profile.configuration.type.name} is not (yet) supported"
+            )
         else:
             raise UnsupportedDataConfiguration(
                 f"DataConfiguration {self.data_table_profile.configuration.type.name} is not (yet) supported"
@@ -445,6 +502,17 @@ class WrongFilterFormatException(Exception):
 
 class InvalidDataConfiguration(Exception):
     """Thrown when there is no or invalid DataConfiguration"""
+
+    pass
+
+
+class InvalidInfluxDBCredentials(Exception):
+    """Thrown when no credentials are provided for connecting to InfluxDB."""
+
+    pass
+
+class InfluxDBProfileLoadError(Exception):
+    """Thrown when failing to load profile from InfluxDB."""
 
     pass
 

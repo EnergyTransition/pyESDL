@@ -104,7 +104,8 @@ class InfluxDBProfileManager(ProfileManager):
         Loads profile information from InfluxDB
 
         :param measurement: the name of the measurement to use in InfluxDB
-        :param fields: a list of field names that need to be loaded from InfluxDB
+        :param fields: a list of field names that need to be loaded from InfluxDB;
+                       if an empty list is given, all fields data of the measurement will be loaded
         :param from_datetime: the start datetime (included in the data)
         :param to_datetime: the end datetime (included in the data)
         :param filters: a list of dictionaries with 'tag' and 'value' keys, that can be used to filter on the data
@@ -124,7 +125,12 @@ class InfluxDBProfileManager(ProfileManager):
             for filter in filters:
                 where_clause_list.append(f"{filter['tag']}='{filter['value']}'")
 
-        fields_string = ",".join(['"' + field + '"' for field in fields])
+        # Select all columns
+        if len(fields) == 0:
+            fields_string = "*"
+        else:
+            fields_string = ",".join(['"' + field + '"' for field in fields])
+
         query_string = f'SELECT {fields_string} FROM "{measurement}"'
         if where_clause_list:
             query_string += " WHERE (" + " AND ".join(where_clause_list) + ")"
@@ -133,6 +139,10 @@ class InfluxDBProfileManager(ProfileManager):
 
         if res:
             res_list = res.get_points()
+            if len(fields) == 0:
+                columns = res.raw.get("series")[0].get("columns")
+                fields = [f for f in columns if f != "time"]
+
             for elem in res_list:
                 dt = parse_date(elem["time"])
 
