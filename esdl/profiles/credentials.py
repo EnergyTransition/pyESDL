@@ -26,8 +26,8 @@ class Credentials:
     @classmethod
     def add_credential(cls, id: str, username: str, password: str) -> None:
         """
-        Adds credentials
-        :param id: id of the DatabaseConfiguration, 'host' or 'host:port' for more generic matching.
+        Add database credential, will be matched on 'id': use 'host' or 'host:port', or DatabaseConfiguration 'id'.
+        :param id: credential id: 'host' or 'host:port', or DatabaseConfiguration 'id'
         :param username: username
         :param password: password
         """
@@ -35,6 +35,11 @@ class Credentials:
 
     @classmethod
     def get_credential(cls, configuration: esdl.DatabaseConfiguration) -> Credential | None:
+        """
+        Retrieves credentials for a given DatabaseConfiguration, based on the configuration 'id', 'host:port' or 'host'.
+        :param configuration: DatabaseConfiguration object
+        :return: Credential object or None if not found
+        """
         # get credentials, first try on id of configuration
         credential = cls.credentials_dict.get(configuration.id, None)
         if credential is None and configuration.port is not None:

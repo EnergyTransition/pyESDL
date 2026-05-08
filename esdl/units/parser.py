@@ -17,63 +17,63 @@ from esdl import esdl
 from esdl.units.conversion import equals
 
 unitdict = {
-    'NONE': '-',
-    'AMPERE': 'A',
-    'JOULE': 'J',
-    'WATTHOUR': 'Wh',
-    'WATT': 'W',
-    'VOLT': 'V',
-    'BAR': 'bar',
-    'PSI': 'psi',
-    'DEGREES_CELSIUS': '\u2103',  # Sign for degrees Celcius
-    'KELVIN': 'K',
-    'GRAM': 'g',
-    'TONNE': 't',
-    'EURO': 'EUR',
-    'DOLLAR': 'USD',
-    'METRE': 'm',
-    'SQUARE_METRE': 'm2',
-    'CUBIC_METRE': 'm3',
-    'LITRE': 'l',
-    'WATTSECOND': 'Ws',
-    'ARE': 'a',
-    'HECTARE': 'ha',
-    'PERCENT': '%',
-    'VOLT_AMPERE': 'VA',
-    'VOLT_AMPERE_REACTIVE': 'VAR',
-    'PASCAL': 'Pa',
-    'NEWTON': 'N',
-    'DEGREES': '\u00b0',  # Sign for degrees
-    'HOUR': 'h'
+    "NONE": "-",
+    "AMPERE": "A",
+    "JOULE": "J",
+    "WATTHOUR": "Wh",
+    "WATT": "W",
+    "VOLT": "V",
+    "BAR": "bar",
+    "PSI": "psi",
+    "DEGREES_CELSIUS": "\u2103",  # Sign for degrees Celcius
+    "KELVIN": "K",
+    "GRAM": "g",
+    "TONNE": "t",
+    "EURO": "EUR",
+    "DOLLAR": "USD",
+    "METRE": "m",
+    "SQUARE_METRE": "m2",
+    "CUBIC_METRE": "m3",
+    "LITRE": "l",
+    "WATTSECOND": "Ws",
+    "ARE": "a",
+    "HECTARE": "ha",
+    "PERCENT": "%",
+    "VOLT_AMPERE": "VA",
+    "VOLT_AMPERE_REACTIVE": "VAR",
+    "PASCAL": "Pa",
+    "NEWTON": "N",
+    "DEGREES": "\u00b0",  # Sign for degrees
+    "HOUR": "h",
 }
 
 
 timeunitdict = {
-    'SECOND': 'sec',
-    'MINUTE': 'min',
-    'QUARTER': '15mins',
-    'HOUR': 'hr',
-    'DAY': 'day',
-    'WEEK': 'wk',
-    'MONTH': 'mon',
-    'YEAR': 'yr'
+    "SECOND": "sec",
+    "MINUTE": "min",
+    "QUARTER": "15mins",
+    "HOUR": "hr",
+    "DAY": "day",
+    "WEEK": "wk",
+    "MONTH": "mon",
+    "YEAR": "yr",
 }
 
 
 multiplierdict = {
-    'ATTO': 'a',
-    'FEMTO': 'f',
-    'PICO': 'p',
-    'NANO': 'n',
-    'MICRO': 'u',
-    'MILLI': 'm',
-    'KILO': 'k',
-    'MEGA': 'M',
-    'GIGA': 'G',
-    'TERA': 'T',
-    'TERRA': 'T',       # due to spelling mistake in ESDL
-    'PETA': 'P',
-    'EXA': 'E'
+    "ATTO": "a",
+    "FEMTO": "f",
+    "PICO": "p",
+    "NANO": "n",
+    "MICRO": "u",
+    "MILLI": "m",
+    "KILO": "k",
+    "MEGA": "M",
+    "GIGA": "G",
+    "TERA": "T",
+    "TERRA": "T",  # due to spelling mistake in ESDL
+    "PETA": "P",
+    "EXA": "E",
 }
 
 
@@ -86,8 +86,8 @@ def qau_to_string(qau):
     """
     s = qau.physicalQuantity.name
     str_unit = unit_to_string(qau)
-    if str_unit != '':
-        s += ' in ' + str_unit
+    if str_unit != "":
+        s += " in " + str_unit
 
     return s
 
@@ -99,36 +99,36 @@ def unit_to_string(qau):
     :param qau: an esdl.QuantityAndUnit instance
     :result: string representation of the unit only of the QuanityAndUnit instance
     """
-    mult = qau.multiplier.name
-    unit = qau.unit.name
-    pmult = qau.perMultiplier.name
-    punit = qau.perUnit.name
-    ptunit = qau.perTimeUnit.name
+    mult = qau.multiplier.name if hasattr(qau.multiplier, "name") else qau.multiplier
+    unit = qau.unit.name if hasattr(qau.unit, "name") else qau.unit
+    pmult = qau.perMultiplier.name if hasattr(qau.perMultiplier, "name") else qau.perMultiplier
+    punit = qau.perUnit.name if hasattr(qau.perUnit, "name") else qau.perUnit
+    ptunit = qau.perTimeUnit.name if hasattr(qau.perTimeUnit, "name") else qau.perTimeUnit
 
-    s = ''
+    s = ""
 
-    if unit != 'NONE' and unit != 'UNDEFINED':
-        if mult != 'NONE' and mult != 'UNDEFINED':
+    if unit != "NONE" and unit != "UNDEFINED":
+        if mult != "NONE" and mult != "UNDEFINED":
             s += multiplierdict[mult]
         try:
             s += unitdict[unit]
         except KeyError:
             s += unit
-    if punit != 'NONE' and punit != 'UNDEFINED':
-        s += '/'
-        if pmult != 'NONE' and pmult != 'UNDEFINED':
+    if punit != "NONE" and punit != "UNDEFINED":
+        s += "/"
+        if pmult != "NONE" and pmult != "UNDEFINED":
             s += multiplierdict[pmult]
         try:
             s += unitdict[punit]
         except KeyError:  # SECOND etc is not in the dict
             s += punit
-    if ptunit != 'NONE' and ptunit != 'UNDEFINED':
-        s += '/' + timeunitdict[ptunit]
+    if ptunit != "NONE" and ptunit != "UNDEFINED":
+        s += "/" + timeunitdict[ptunit]
 
     return s
 
 
-def build_qau_from_unit_string(unit_string: str, physical_quantity = None):
+def build_qau_from_unit_string(unit_string: str, physical_quantity=None):
     """
     Build an esdl.QuantityAndUnit instance from a string representing only the unit (and not the physical quantity),
     for example from "kWh/yr".
@@ -152,7 +152,7 @@ def build_qau_from_unit_string(unit_string: str, physical_quantity = None):
             # WARNING: isinstance('ENERGY', esdl.PhysicalQuantityEnum) == True, even while the type is str...
             qau.physicalQuantity = physical_quantity
 
-    unit_parts = unit_string.split('/')
+    unit_parts = unit_string.split("/")
     if unit_parts:
         # Parse the unit
         for u in unitdict:
@@ -267,7 +267,7 @@ def get_or_create_global_qau_reference(es: esdl.EnergySystem, orig_qau: esdl.Qua
     if not qau_ref:
         new_qau = orig_qau.deepcopy()
         if is_valid_uuid(new_qau.id, 4):
-            new_qau.id = str(uuid.uuid4())     # If the orig_qau had an UUID as ID, change it
+            new_qau.id = str(uuid.uuid4())  # If the orig_qau had an UUID as ID, change it
 
         qaus.quantityAndUnit.append(new_qau)
         qau_ref = esdl.QuantityAndUnitReference(reference=new_qau)

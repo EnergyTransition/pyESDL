@@ -1,6 +1,6 @@
 Credentials
 -----------
 
-.. automodule:: profiles.data_configurations.credentials
+.. automodule:: profiles.credentials
    :members:
    :undoc-members:

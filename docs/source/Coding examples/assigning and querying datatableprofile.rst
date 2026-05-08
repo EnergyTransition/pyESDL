@@ -27,6 +27,7 @@ The example demonstrates the workflow for uploading profiles stored in a CSV fil
 
     from esdl.support_functions import deepcopy
     from esdl.units.conversion import POWER_IN_MW
+    from esdl.profiles.credentials import Credentials
 
     # Create a new datatable profile with data from e.g. CSV or Excel
     # Assign a DataTableProfile tableName, so the uploaded profiles will be saved to the corresponding table.
@@ -50,10 +51,10 @@ The example demonstrates the workflow for uploading profiles stored in a CSV fil
         host="localhost",
         port=5432,
     )
-    cred = Credentials.create_dict("my_database_id", "postgres", "password")
+    Credentials.add_credential("my_database_id", "postgres", "password")
 
     # Save data in database configured in dtp.configuration
-    dtpman.save(cred)
+    dtpman.save()
 
 
 Example 2 - Assigning a DataTableProfile to an ESDL asset port
@@ -268,9 +269,7 @@ Using :code:`DataTableProfileManager` and providing the connection credential to
 
     dtp_manager = DataTableProfileManager(dtp)
     # Provide the connection credentials for the DatabaseConfiguration that is registered in EnergySystemInformation
-    dtp_manager.add_credential(
-        Credentials.create_dict("my_database_id", "postgres", "password")
-    )
+    Credentials.add_credential("my_database_id", "postgres", "password")
     dtp_manager.load_database_configuration()
 
     print("-------------- get raw profile data from database ------------------")
@@ -303,8 +302,9 @@ To have the maximum flexibility with querying (e.g., for visualization purposes)
     print("-------------- get profile data with custom  query ------------------")
 
     from datetime import datetime
+    from esdl.profiles.credentials import Credentials
 
-    cred_dict = Credentials.create_dict("my_database_id", "postgres", "password")
+    Credentials.add_credential("my_database_id", "postgres", "password")
     
     multiplier = 20.0
     start_date = datetime(2019, 3, 1)
@@ -313,7 +313,6 @@ To have the maximum flexibility with querying (e.g., for visualization purposes)
 
     profile_values, header, metadata = DataTableProfileManager.query(
         data_table_profile=dtp,
-        credentials_dict=cred_dict,
         table_name=dtp.tableName,
         column_name=dtp.columnName,
         start_date=start_date,
@@ -346,8 +345,8 @@ To retrieve and cache all profiles stored within the same database table via ski
     )
 
     dtpm = DataTableProfileManager(dtp)
-    cred_dict = Credentials.create_dict("my_database_id", "postgres", "password")
-    dtpm.load_database_configuration(credentials_dict=cred_dict)
+    Credentials.add_credential("my_database_id", "postgres", "password")
+    dtpm.load_database_configuration()
 
     print(dtpm.profile_header)
 

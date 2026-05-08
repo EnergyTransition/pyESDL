@@ -12,6 +12,7 @@
 #  Manager:
 #      TNO
 import logging
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
@@ -23,7 +24,7 @@ from esdl import DataTableProfile
 from esdl.profiles.credentials import Credentials
 from esdl.profiles.data_configurations.postgresql import (
     DataTableMetaData,
-    PostgresqlConfiguration,
+    PostgresqlDataTableManager,
 )
 from esdl.profiles.excelprofilemanager import ExcelProfileManager
 from esdl.profiles.influxdbprofilemanager import (
@@ -45,9 +46,7 @@ class DataTableProfileManager(ProfileManager):
     """
 
     data_table_profile: esdl.DataTableProfile
-    metadata: List[DataTableMetaData]
-    _postgres_connections: Dict[tuple, PostgresqlConfiguration] = dict()
-    _influxdb_connections: Dict[tuple, InfluxDBProfileManager] = dict()
+    metadata: List[DataTableMetaData | None]
 
     def __init__(self, data_table_profile: esdl.DataTableProfile | None = None, source_profile=None):
         """
@@ -72,69 +71,26 @@ class DataTableProfileManager(ProfileManager):
         self.data_table_profile = data_table_profile
 
     @staticmethod
-    def _get_postgres_cache_key(data_table_profile: esdl.DataTableProfile) -> tuple:
-        configuration = data_table_profile.configuration
-        credential = Credentials.get_credential(configuration)
-        username = credential.username if credential and credential.username else ""
-        password = credential.password if credential and credential.password else ""
-        return (
-            configuration.host,
-            configuration.port or 5432,
-            configuration.database,
-            username,
-            password,
-        )
+    def close_db_connections() -> None:
+        """
+        Closes all database connections in the cache.
+        Should be called when the application is shutting down to properly close resources.
+        """
+        PostgresqlDataTableManager.close_connections()
+        InfluxDBProfileManager.close_connections()
 
-    @classmethod
-    def _get_postgres_connection(cls, data_table_profile: esdl.DataTableProfile) -> PostgresqlConfiguration:
-        cache_key = cls._get_postgres_cache_key(data_table_profile)
-        postgres = cls._postgres_connections.get(cache_key)
-
-        if postgres is None or postgres.connection is None or postgres.connection.closed:
-            postgres = PostgresqlConfiguration(data_table_profile)
-            cls._postgres_connections[cache_key] = postgres
-        else:
-            postgres.datatable_profile = data_table_profile
-
-        return postgres
-
-    @staticmethod
-    def _get_influx_cache_key(settings: ConnectionSettings) -> tuple:
-        host = settings.host.replace("http://", "").replace("https://", "")
-        return (
-            host,
-            settings.port,
-            settings.username,
-            settings.password,
-            settings.database,
-            settings.ssl,
-            settings.verify_ssl,
-        )
-
-    @classmethod
-    def _get_influxdb_connection(cls, settings: ConnectionSettings) -> InfluxDBProfileManager:
-        cache_key = cls._get_influx_cache_key(settings)
-        influxdb_pm = cls._influxdb_connections.get(cache_key)
-
-        if influxdb_pm is None:
-            influxdb_pm = InfluxDBProfileManager(settings)
-            cls._influxdb_connections[cache_key] = influxdb_pm
-
-        return influxdb_pm
-
-    @classmethod
-    def clear_connection_cache(cls):
-        for postgres in cls._postgres_connections.values():
-            postgres.disconnect()
-        cls._postgres_connections.clear()
-        cls._influxdb_connections.clear()
-
-    def load_from_database(self, configuration: esdl.DatabaseConfiguration | None = None):
+    def load_from_database(
+        self,
+        configuration: esdl.DatabaseConfiguration | None = None,
+        close_connection_after_load: bool = True,
+    ):
         """
         Loads profile data from a database configuration into profile_header and profile_data_list.
 
         :param configuration: the database configuration, optional, otherwise
                             the one provided in the constructor is used
+        :param close_connection_after_load: if True (default), close DB connection after loading data.
+                            If False, callers must close connections manually via close_db_connections().
         :return: None
         """
         if not configuration:
@@ -145,47 +101,60 @@ class DataTableProfileManager(ProfileManager):
         self.clear_profile()
         self.profile_type = ProfileType.DATETIME_LIST
 
-        if configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
-            # handle postgres
-            postgres = self._get_postgres_connection(self.data_table_profile)
-            self.profile_data_list, self.profile_header, self.metadata = postgres.load_data()
-            if len(self.profile_data_list) > 0:
-                self.num_profile_items = len(self.profile_data_list[0])
-                if self.num_profile_items > 0:
-                    dt_index = self.get_profile_name_index(self.data_table_profile.datetimeColumnName)
-                    self.start_datetime = self.profile_data_list[0][dt_index]
-                    self.end_datetime = self.profile_data_list[-1][dt_index]
-        elif configuration.type == esdl.DatabaseTypeEnum.INFLUXDB:
-            credential = Credentials.get_credential(configuration)
-            settings = ConnectionSettings(
-                host=configuration.host,
-                port=configuration.port,
-                username=credential.username if credential and credential.username else "",
-                password=credential.password if credential and credential.password else "",
-                database=configuration.database,
-                ssl="https" in configuration.host or configuration.port == 443,
-                verify_ssl=configuration.tls or False,
-            )
-
-            try:
-                influxdb_pm = self._get_influxdb_connection(settings)
-                influxdb_pm.load_influxdb(
-                    measurement=self.data_table_profile.tableName,
-                    fields=([self.data_table_profile.columnName] if self.data_table_profile.columnName else []),
-                    from_datetime=self.data_table_profile.startDate,
-                    to_datetime=self.data_table_profile.endDate,
-                    filters=InfluxDBProfileManager._parse_esdl_profile_filters(self.data_table_profile.filter),
+        try:
+            if configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
+                # handle postgres
+                pdt_manager = PostgresqlDataTableManager.get_from_cache_or_create(self.data_table_profile)
+                self.profile_data_list, self.profile_header, self.metadata = pdt_manager.load_data(
+                    additional_filters=DataTableProfileManager._parse_profile_filter(
+                        self.data_table_profile.filter, as_dict=True
+                    )
+                )
+                if len(self.profile_data_list) > 0:
+                    self.num_profile_items = len(self.profile_data_list[0])
+                    if self.num_profile_items > 0:
+                        dt_index = self.get_profile_name_index(self.data_table_profile.datetimeColumnName)
+                        self.start_datetime = self.profile_data_list[0][dt_index]
+                        self.end_datetime = self.profile_data_list[-1][dt_index]
+            elif configuration.type == esdl.DatabaseTypeEnum.INFLUXDB:
+                credential = Credentials.get_credential(configuration)
+                use_ssl = "https" in configuration.host or configuration.port == 443
+                settings = ConnectionSettings(
+                    host=configuration.host,
+                    port=configuration.port,
+                    username=credential.username if credential and credential.username else "",
+                    password=credential.password if credential and credential.password else "",
+                    database=configuration.database,
+                    ssl=use_ssl,
+                    verify_ssl=use_ssl,
                 )
 
-                # Copies all data loaded in the influxdb_pm instance into ProfileManager instance
-                self.convert(influxdb_pm)
-            except Exception as e:
-                logging.error(e)
-                raise InfluxDBProfileLoadError(f"Failed to load from InfluxDB: {e}")
-        else:
-            raise UnsupportedDataConfiguration(
-                f"DataConfiguration of type {configuration.type.name} is not yet supported"
-            )
+                try:
+                    influxdb_pm = InfluxDBProfileManager.get_from_cache_or_create(settings)
+                    if not influxdb_pm.load_influxdb(
+                        measurement=self.data_table_profile.tableName,
+                        fields=([self.data_table_profile.columnName] if self.data_table_profile.columnName else []),
+                        from_datetime=self.data_table_profile.startDate,
+                        to_datetime=self.data_table_profile.endDate,
+                        filters=DataTableProfileManager._parse_profile_filter(self.data_table_profile.filter),
+                    ):
+                        raise InfluxDBProfileLoadError(
+                            f"Failed to load profile data from InfluxDB for profile with id:{self.data_table_profile.id}"
+                            f" from host '{settings.host}{f':{settings.port}' if settings.port else ''}'"
+                        )
+
+                    # Copies all data loaded in the influxdb_pm instance into ProfileManager instance
+                    self.convert(influxdb_pm)
+                except Exception as e:
+                    logging.error(e)
+                    raise InfluxDBProfileLoadError(f"Failed to load from InfluxDB: {e}")
+            else:
+                raise UnsupportedDataConfiguration(
+                    f"DataConfiguration of type {configuration.type.name} is not yet supported"
+                )
+        finally:
+            if close_connection_after_load:
+                self.close_db_connections()
 
     def get_profile_with_multiplier(self, column_based: bool = False) -> List[List[float]]:
         """
@@ -235,6 +204,32 @@ class DataTableProfileManager(ProfileManager):
             return [list(col) for col in zip(*scaled_profile_data)]
 
         return scaled_profile_data
+
+    @staticmethod
+    def _parse_profile_filter(
+        filter: str | None, as_dict: bool = False
+    ) -> list[dict[str, str]] | dict[str, str] | None:
+        """
+        A util function to parse profile filter string into a list of dict.
+
+        If as_dict=False (default): return list of {"tag": key, "value": value}
+        If as_dict=True: return dict {key: value}
+        """
+
+        if not filter:
+            return None
+
+        pattern = r'"?(\w+)"?\s*=\s*["\']([^"\']*)["\']'
+        matches = re.findall(pattern, filter)
+
+        if not matches:
+            logging.error(f"Failed to parse filter string: {filter}")
+            return None
+
+        if as_dict:
+            return {k: v for k, v in matches}
+
+        return [{"tag": k, "value": v} for k, v in matches]
 
     @staticmethod
     def load(
@@ -323,7 +318,7 @@ class DataTableProfileManager(ProfileManager):
         configuration = data_table_profile.configuration
         if isinstance(configuration, esdl.DatabaseConfiguration):
             if configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
-                postgres = DataTableProfileManager._get_postgres_connection(data_table_profile)
+                postgres = PostgresqlDataTableManager.get_from_cache_or_create(data_table_profile)
 
                 dt_column_name = (
                     datetime_column_name if datetime_column_name is not None else data_table_profile.datetimeColumnName
@@ -434,7 +429,7 @@ class DataTableProfileManager(ProfileManager):
 
         if self.data_table_profile.configuration.type == esdl.DatabaseTypeEnum.POSTGRESQL:
             # handle postgres
-            postgres = self._get_postgres_connection(self.data_table_profile)
+            postgres = PostgresqlDataTableManager.get_from_cache_or_create(self.data_table_profile)
             postgres.save_data(self.profile_data_list, self.profile_header, overwrite=drop)
         elif self.data_table_profile.configuration.type == esdl.DatabaseTypeEnum.INFLUXDB:
             # TODO: support InfluxDB

@@ -1,17 +1,19 @@
+import logging
 from dataclasses import dataclass
 from datetime import datetime
-from logging import error, warning
 from typing import Any
 
 import psycopg
 from psycopg import Connection, sql
+from psycopg.types.json import Jsonb
 
-from esdl import QuantityAndUnitType, esdl
+from esdl import DataTableProfile, QuantityAndUnitType, esdl
 from esdl.profiles.credentials import Credentials
 from esdl.units.parser import build_qau_from_unit_string, unit_to_string
 
 # table name used for storing metadata that is not in the table
 META_DATA_TABLE_NAME = "datatable_metadata"
+FILTER_DICT_COLUMN_NAME = "tags"
 META_DATA_TABLE_COLUMNS = [
     "table_name",
     "column_name",
@@ -32,7 +34,7 @@ class DataTableMetaData:
     name: str | None
 
 
-class PostgresqlConfiguration:
+class PostgresqlDataTableManager:
     """
     Implementation of PostgreSQL configuration for DataTableProfile
     DatabaseConfiguration(type=esdl.DatabaseTypeEnum.POSTGRESQL)
@@ -40,6 +42,44 @@ class PostgresqlConfiguration:
 
     connection: Connection | None
     datatable_profile: esdl.DataTableProfile
+    _connections: dict[tuple, "PostgresqlDataTableManager"] = dict()
+
+    @staticmethod
+    def _get_cache_key(datatable_profile: esdl.DataTableProfile) -> tuple:
+        configuration = datatable_profile.configuration
+        credential = Credentials.get_credential(configuration)
+        username = credential.username if credential and credential.username else ""
+        password = credential.password if credential and credential.password else ""
+        return (
+            configuration.host,
+            configuration.port or 5432,
+            configuration.database,
+            username,
+            password,
+        )
+
+    @classmethod
+    def get_from_cache_or_create(cls, datatable_profile: esdl.DataTableProfile) -> "PostgresqlDataTableManager":
+        cache_key = cls._get_cache_key(datatable_profile)
+        postgres_connection = cls._connections.get(cache_key)
+
+        if (
+            postgres_connection is None
+            or postgres_connection.connection is None
+            or postgres_connection.connection.closed
+        ):
+            postgres_connection = PostgresqlDataTableManager(datatable_profile)
+            cls._connections[cache_key] = postgres_connection
+        else:
+            postgres_connection.datatable_profile = datatable_profile
+
+        return postgres_connection
+
+    @classmethod
+    def close_connections(cls):
+        for postgres in cls._connections.values():
+            postgres.disconnect()
+        cls._connections.clear()
 
     def __init__(self, datatable_profile: esdl.DataTableProfile):
         self.datatable_profile = datatable_profile
@@ -53,12 +93,6 @@ class PostgresqlConfiguration:
         try:
             configuration = datatable_profile.configuration
 
-            if DEBUG_SQL:
-                username = self.credentials.username if self.credentials else "non_auth"
-                print(
-                    f"Connecting to Postgres database at {username}@{configuration.host}:"
-                    f"{configuration.port or 5432}/{configuration.database}",
-                )
             connect_kwargs = {
                 "host": configuration.host,
                 "port": configuration.port or 5432,
@@ -69,9 +103,22 @@ class PostgresqlConfiguration:
                 connect_kwargs["user"] = credential.username
                 connect_kwargs["password"] = credential.password
 
+            if DEBUG_SQL:
+                username = credential.username if credential else "non_auth"
+                print(
+                    f"Connecting to Postgres database at {username}@{configuration.host}:"
+                    f"{configuration.port or 5432}/{configuration.database}",
+                )
+
             self.connection = psycopg.connect(**connect_kwargs)
         except Exception as e:
-            print("Error while connecting to PostgreSQL: ", e)
+            e_str = str(e).lower()
+            if "database" in e_str and "does not exist" in e_str:
+                logging.info(
+                    f"Could not connect to PostgreSQL: Database '{connect_kwargs['dbname']}' does not exist yet."
+                )
+            else:
+                logging.error("Error while connecting to PostgreSQL: ", e)
             if self.connection and not self.connection.closed:
                 self.connection.close()
                 raise e
@@ -83,6 +130,38 @@ class PostgresqlConfiguration:
     def disconnect(self):
         if self.connection:
             self.connection.close()
+
+    def _create_database(self):
+        """
+        Create the target database if it doesn't exist.
+        This is called only when a "database does not exist" error occurs.
+        """
+        configuration = self.datatable_profile.configuration
+        credential = Credentials.get_credential(self.datatable_profile.configuration)
+
+        try:
+            # Connect to postgres database to create target database
+            admin_connect_kwargs = {
+                "host": configuration.host,
+                "port": configuration.port or 5432,
+                "dbname": "postgres",
+            }
+            if credential and credential.username and credential.password:
+                admin_connect_kwargs["user"] = credential.username
+                admin_connect_kwargs["password"] = credential.password
+
+            # CREATE DATABASE must run outside an explicit transaction.
+            with psycopg.connect(**admin_connect_kwargs, autocommit=True) as admin_conn:
+                with admin_conn.cursor() as cursor:
+                    cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(configuration.database)))
+                    if DEBUG_SQL:
+                        print(f"Created database '{configuration.database}'")
+
+            # Reconnect to the newly created database
+            self._connect_postgres(self.datatable_profile)
+        except Exception as e:
+            logging.error(f"Failed to create database: {e}")
+            raise
 
     def load_data(
         self,
@@ -97,7 +176,7 @@ class PostgresqlConfiguration:
         :param additional_filters: (key,value) set of additional filters for the query in the WHERE clause
         :param column_based: if True, data is returned by column instead of row
         :return: a tuple of profile_values[[]], header[], List[DataTableMetaData] with data loaded from Postgres.
-        the datetime column is always returned as first column
+                 the datetime column is always returned as first column
         """
         if not self.connection:
             raise Exception("PostgreSQL connection not established")
@@ -115,7 +194,7 @@ class PostgresqlConfiguration:
             # column is None if we want to query all columns
             col_ident = sql.Identifier(self.datatable_profile.columnName) if self.datatable_profile.columnName else None
 
-            where_sql, params = PostgresqlConfiguration._build_where_clause(
+            where_sql, params = PostgresqlDataTableManager._build_where_clause(
                 dt_ident, self.datatable_profile.startDate, self.datatable_profile.endDate, additional_filters
             )
 
@@ -134,7 +213,7 @@ class PostgresqlConfiguration:
             result = cursor.fetchall()
 
             # process results
-            profile_values, header = PostgresqlConfiguration._process_query_results(
+            profile_values, header = PostgresqlDataTableManager._process_query_results(
                 cursor, result, self.datatable_profile.datetimeColumnName, column_based
             )
             metadata = [self.load_meta_data(c) for c in header]
@@ -189,7 +268,7 @@ class PostgresqlConfiguration:
             # otherwise, DataTableProfile assigned multiplier or default value (1.0) is used.
             multiplier = multiplier if multiplier is not None else self.datatable_profile.multiplier
 
-            where_sql, params = PostgresqlConfiguration._build_where_clause(
+            where_sql, params = PostgresqlDataTableManager._build_where_clause(
                 dt_ident, start_date, end_date, additional_filters
             )
 
@@ -228,7 +307,7 @@ class PostgresqlConfiguration:
             cursor.execute(query, params)
             result = cursor.fetchall()
 
-            profile_values, header = PostgresqlConfiguration._process_query_results(
+            profile_values, header = PostgresqlDataTableManager._process_query_results(
                 cursor, result, datetime_column_name, column_based
             )
 
@@ -269,10 +348,11 @@ class PostgresqlConfiguration:
             params.append(end_date.strftime(dt_str_format))
 
         # NOTE: 'OR' or more complex filtering is not supported yet.
+        # Filter on key-value pairs stored in the JSONB tags column.
         if additional_filters:
-            for col, val in additional_filters.items():
-                where_clauses.append(sql.SQL("{col} = %s").format(col=sql.Identifier(col)))
-                params.append(val)
+            for key, val in additional_filters.items():
+                where_clauses.append(sql.SQL("{tags} ->> %s = %s").format(tags=sql.Identifier(FILTER_DICT_COLUMN_NAME)))
+                params.extend([key, val])
 
         where_sql = sql.SQL(" WHERE ") + sql.SQL(" AND ").join(where_clauses) if where_clauses else sql.SQL("")
 
@@ -351,49 +431,71 @@ class PostgresqlConfiguration:
                     if result_dict["profile_name"]:
                         self.datatable_profile.name = result_dict["profile_name"]
                     return DataTableMetaData(qau, result_dict["profile_name"])
-                warning(
+                logging.warning(
                     f"No metadata found for table {table.as_string()} and column '{column_name or self.datatable_profile.columnName}'"
                     f" in database '{self.datatable_profile.configuration.database}', cannot derive unit"
                 )
                 return None
             except Exception:
-                warning(
+                logging.warning(
                     f"No metadata found for table {table.as_string()} and column '{column_name or self.datatable_profile.columnName}'"
                     f" in database '{self.datatable_profile.configuration.database}', cannot derive units"
                 )
 
-    def save_data(self, profile_values: list[list[Any]], header: list[str], overwrite: bool = True):
+    def save_data(
+        self,
+        profile_values: list[list[Any]],
+        header: list[str],
+        overwrite: bool = True,
+        profile_dict: dict[str, DataTableProfile] | None = None,
+        filter_dict: dict[str, str] | None = None,
+    ):
         """
         Saves data to Postgres. It will insert all the columns in the profile_values by default.
+        If the database doesn't exist, it will be created automatically on first error.
 
         :param profile_values:
         :param header:
         :param overwrite: If True, truncate the existing table rows and insert new ones.
+        :param profile_dict: Optional dictionary mapping columnName to DataTableProfile instances for metadata lookup.
+        :param filter_dict: Optional dict of filter tag key/value pairs to add as a constant JSONB column to each row.
         :return:
         """
-        if not self.connection:
-            raise Exception("PostgreSQL connection not established")
         if not self.datatable_profile.tableName:
             raise InvalidDataTableProfile(f"Missing tableName in DataTableProfile with id={self.datatable_profile.id}")
+
+        # If connecting failed because the DB does not exist yet, create it and reconnect.
+        if not self.connection or self.connection.closed:
+            logging.info(f"Database '{self.datatable_profile.configuration.database}' not reachable, creating it...")
+            self._create_database()
+
+        if not self.connection or self.connection.closed:
+            raise Exception("PostgreSQL connection not established")
 
         if self.datatable_profile.schema:
             table = sql.Identifier(self.datatable_profile.schema, self.datatable_profile.tableName)
         else:
             table = sql.Identifier(self.datatable_profile.tableName)
 
-        # COMMENT ON COLUMN essim_run_20250804.csv_data_table.column2 IS 'unit=PJ';
+        # Store filter tags in a single JSONB column shared by all rows in this save operation.
+        filter_payload = Jsonb(filter_dict) if filter_dict else None
+        extended_header = list(header) + [FILTER_DICT_COLUMN_NAME]
+        extended_values = [list(row) + [filter_payload] for row in profile_values]
 
         with self.connection.cursor() as cursor:
-            non_datetime_columns = list(header)
+            non_datetime_columns = list(extended_header)
             try:
                 non_datetime_columns.remove(self.datatable_profile.datetimeColumnName)
             except ValueError as e:
-                error(
-                    f"Cannot find datetime column '{self.datatable_profile.datetimeColumnName}' in dataset, ",
+                logging.error(
+                    f"Error saving profile profile id={self.datatable_profile.id} to database: cannot find datetime"
+                    f" column '{self.datatable_profile.datetimeColumnName}' header '{header}'."
                 )
-                error("configure using esdl.DataTableProfile.datetimeColumnName")
                 raise e
-            insert_columns = [f'"{c}" DOUBLE PRECISION' for c in non_datetime_columns]
+
+            insert_columns = [
+                f'"{c}" {"JSONB" if c == FILTER_DICT_COLUMN_NAME else "DOUBLE PRECISION"}' for c in non_datetime_columns
+            ]
             insert_columns.insert(0, f'"{self.datatable_profile.datetimeColumnName}" TIMESTAMP')
             insert_column_statement = ",\n".join(insert_columns)
 
@@ -427,19 +529,38 @@ class PostgresqlConfiguration:
                     print(query.as_string(cursor))
                 cursor.execute(query)
 
-            columns = sql.SQL(", ").join(sql.Identifier(h) for h in header)
+            # Add any missing columns to the table
+            for col in extended_header:
+                col_type = sql.SQL("JSONB" if col == FILTER_DICT_COLUMN_NAME else "DOUBLE PRECISION")
+                query = (
+                    sql.SQL("ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} ").format(
+                        table=table, column=sql.Identifier(col)
+                    )
+                    + col_type
+                )
+                if DEBUG_SQL:
+                    print(query.as_string(cursor))
+                cursor.execute(query)
+            self.connection.commit()
+
+            columns = sql.SQL(", ").join(sql.Identifier(h) for h in extended_header)
             query = sql.SQL("COPY {table} ({columns}) FROM STDIN").format(table=table, columns=columns)
             if DEBUG_SQL:
                 print(query.as_string(cursor))
             with cursor.copy(query) as copy:
-                for row in profile_values:
+                for row in extended_values:
                     copy.write_row(row)
 
             # Set extra information in tableName_metadata table (in same schema)
             # such as Unit, Quantity, multiplier, and name of profile (and id?)
-
-            for column_name in header:
-                self.save_meta_data(self.datatable_profile, column_name)
+            for column_name in extended_header:
+                if column_name == FILTER_DICT_COLUMN_NAME:
+                    continue
+                if profile_dict and column_name in profile_dict:
+                    dtp = profile_dict[column_name]
+                else:
+                    dtp = self.datatable_profile
+                self.save_meta_data(dtp, column_name)
             self.connection.commit()
 
     def save_meta_data(self, datatable_profile: esdl.DataTableProfile, column_name: str | None = None):
@@ -453,6 +574,9 @@ class PostgresqlConfiguration:
         :return: None
         """
         qau = datatable_profile.profileQuantityAndUnit
+        if isinstance(qau, esdl.QuantityAndUnitReference):
+            qau = qau.reference
+
         if qau is None or qau.unit is None or qau.physicalQuantity is None:
             raise InvalidDataTableProfile(
                 f"Missing Quantity and unit information for DataTableProfile with id={datatable_profile.id}"
@@ -522,7 +646,7 @@ class PostgresqlConfiguration:
                     ),
                 )
             except Exception as e:
-                error("Error", e)
+                logging.error("Error", e)
 
 
 class InvalidCredentials(Exception):
