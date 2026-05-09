@@ -134,7 +134,7 @@ class PostgresqlDataTableManager:
     def _create_database(self):
         """
         Create the target database if it doesn't exist.
-        This is called only when a "database does not exist" error occurs.
+        This is called only on save when a "database does not exist" error occurs.
         """
         configuration = self.datatable_profile.configuration
         credential = Credentials.get_credential(self.datatable_profile.configuration)
@@ -183,10 +183,7 @@ class PostgresqlDataTableManager:
 
         with self.connection.cursor() as cursor:
             if self.datatable_profile.schema:
-                table_ident = sql.Identifier(
-                    self.datatable_profile.schema,
-                    self.datatable_profile.tableName,
-                )
+                table_ident = sql.Identifier(self.datatable_profile.schema, self.datatable_profile.tableName)
             else:
                 table_ident = sql.Identifier(self.datatable_profile.tableName)
 
@@ -477,7 +474,7 @@ class PostgresqlDataTableManager:
         else:
             table = sql.Identifier(self.datatable_profile.tableName)
 
-        # Store filter tags in a single JSONB column shared by all rows in this save operation.
+        # Store filter tags in a single JSONB column shared by all rows.
         filter_payload = Jsonb(filter_dict) if filter_dict else None
         extended_header = list(header) + [FILTER_DICT_COLUMN_NAME]
         extended_values = [list(row) + [filter_payload] for row in profile_values]

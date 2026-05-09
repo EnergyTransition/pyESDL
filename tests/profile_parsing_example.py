@@ -30,12 +30,6 @@ def add_port_to_asset(asset):
     return asset_in_port
 
 
-def add_profile_to_port(port, profile: esdl.DataTableProfile):
-    if not hasattr(port, "profile") or port.profile is None:
-        raise TypeError(f"Port '{port.id}': missing 'profile' attribute.")
-    port.profile.append(profile)
-
-
 if __name__ == "__main__":
     # ================================================================================= #
     #  first start databases locally: run `docker compose up --wait` in `tests` folder  #
@@ -86,6 +80,7 @@ if __name__ == "__main__":
     electricity_demand2 = add_electricity_demand_to_area(area, name="ElectricityDemand2", lat=52.0, lon=5.1)
     electricity_demand2_port1 = add_port_to_asset(electricity_demand2)
     electricity_demand2_port2 = add_port_to_asset(electricity_demand2)
+    electricity_demand2_port3 = add_port_to_asset(electricity_demand2)
 
     # create quantity and unit type for power in kW
     qau_power = esdl.QuantityAndUnitType(
@@ -96,8 +91,8 @@ if __name__ == "__main__":
         multiplier=esdl.MultiplierEnum.KILO,
     )
 
-    # ================================
-    # add data table profiles to ports
+    # ========================================================================================
+    # add profiles to ports: DataTableProfile for postgres and influxdb, and TimeSeriesProfile
     dtp_postgres1 = create_data_table_profile(
         es=es,
         database_name=model_run_id,
@@ -161,6 +156,13 @@ if __name__ == "__main__":
     )
     electricity_demand2_port2.profile.append(dtp_influx2)
 
+    time_series_profile = esdl.TimeSeriesProfile(
+        startDateTime=datetime(2019, 1, 1),
+        timestep=3600,  # in seconds
+        values=[row[1] for row in profile_data_list1],
+    )
+    electricity_demand2_port3.profile.append(time_series_profile)
+
     # =============================================================
     # save profile data to database: aggregate for efficient saving
     profiles_to_save = []
@@ -199,8 +201,9 @@ if __name__ == "__main__":
 
                         profile_raw_data, profile_header = load_profile_data_and_header(
                             profile,
-                            True,
-                            False,  # for performance, must close_db_connections() in the end
+                            enable_cache=True,
+                            apply_multiplier=True,
+                            close_connection_after_load=False,  # for performance, must close_db_connections() in the end
                         )
                         if profile_header and profile_raw_data:
                             print(f"Header from profile: {profile_header}")

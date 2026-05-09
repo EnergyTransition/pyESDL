@@ -116,6 +116,7 @@ def close_db_connections() -> None:
 def load_profile_data_and_header(
     profile: DataTableProfile | InfluxDBProfile | TimeSeriesProfile | DateTimeProfile | ProfileReference,
     enable_cache: bool = False,
+    apply_multiplier: bool = True,
     close_connection_after_load: bool = True,
 ) -> tuple[Any | None, list[Any] | None]:
     """
@@ -127,6 +128,7 @@ def load_profile_data_and_header(
 
     :param profile: The profile to process.
     :param enable_cache: Whether to cache profile data for database profiles.
+    :param apply_multiplier: Whether to apply the profile multiplier to the data values, default is True.
     :param close_connection_after_load: If True (default), close DB connection after loading data.
         If False, callers must close connections manually via close_db_connections().
     :return: The profile header and data list, or (None, None).
@@ -142,7 +144,11 @@ def load_profile_data_and_header(
                 dtp.configuration.id, dtp.tableName, dtp.columnName, dtp.startDate, dtp.endDate, dtp.schema
             )
             if cache_key in profile_data_cache:  # return cached profile
-                return profile_data_cache[cache_key]
+                data_list, header = profile_data_cache[cache_key]
+                if apply_multiplier and dtp.multiplier is not None and data_list is not None:
+                    # apply multiplier to cached data, skip first datetime column
+                    data_list = [[row[0]] + [value * dtp.multiplier for value in row[1:]] for row in data_list]
+                return (data_list, header)
 
         # load from database
         dtp_manager = DataTableProfileManager(dtp)
@@ -150,8 +156,12 @@ def load_profile_data_and_header(
         header = dtp_manager.profile_header
         data_list = dtp_manager.profile_data_list
 
-        if enable_cache:  # store in cache
+        if enable_cache:  # store raw in cache
             profile_data_cache[cache_key] = (data_list, header)
+
+        if apply_multiplier and dtp.multiplier is not None and data_list is not None:
+            # apply multiplier, skip first datetime column
+            data_list = [[row[0]] + [value * dtp.multiplier for value in row[1:]] for row in data_list]
     elif isinstance(profile, (TimeSeriesProfile, DateTimeProfile)):
         profile_manager = ProfileManager()
         profile_manager.parse_esdl(profile)
