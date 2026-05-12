@@ -18,6 +18,7 @@ from esdl import (
     ProfileTypeEnum,
     QuantityAndUnitReference,
     QuantityAndUnits,
+    QuantityAndUnitType,
     TimeSeriesProfile,
 )
 from esdl.profiles.credentials import Credentials
@@ -203,7 +204,7 @@ def create_data_table_profile(
     multiplier: float = 1.0,
     db_type=DatabaseTypeEnum.POSTGRESQL,  # EEnumLiteral cannnot be typed, so check if used in function
     profile_type: "ProfileTypeEnum | None" = None,  # type: ignore[valid-type]
-    quantity_and_unit_type: QuantityAndUnitReference | None = None,
+    quantity_and_unit_type: QuantityAndUnitType | None = None,
     data_source: DataSource | None = None,
 ) -> DataTableProfile:
     """Create and add DataTableProfile to a port, and related database configuration to the energy system information
@@ -306,6 +307,8 @@ def create_data_table_profile(
             None,
         )
         if existing_qau is None:
+            if not hasattr(quantity_and_unit_type, "id") or not quantity_and_unit_type.id:
+                quantity_and_unit_type.id = str(uuid.uuid4())
             esi.quantityAndUnits.quantityAndUnit.append(quantity_and_unit_type)
         else:
             quantity_and_unit_type = existing_qau
