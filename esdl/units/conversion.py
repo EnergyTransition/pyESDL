@@ -174,7 +174,9 @@ def equals(base_unit: esdl.QuantityAndUnitType, other: esdl.QuantityAndUnitType)
             base_unit.multiplier == other.multiplier and \
             base_unit.perUnit == other.perUnit and \
             base_unit.perMultiplier == other.perMultiplier and \
-            base_unit.physicalQuantity == other.physicalQuantity:
+            base_unit.physicalQuantity == other.physicalQuantity and \
+            base_unit.perTimeUnit == other.perTimeUnit and \
+            base_unit.perScope == other.perScope:
         return True
     return False
 
