@@ -22,10 +22,11 @@ from esdl import (
     TimeSeriesProfile,
 )
 from esdl.profiles.credentials import Credentials
-from esdl.profiles.data_configurations.postgresql import PostgresqlDataTableManager
+from esdl.profiles.data_configurations.postgresql_datatable_manager import PostgresqlDataTableManager
 from esdl.profiles.datatableprofilemanager import DataTableProfileManager
 from esdl.profiles.influxdbprofilemanager import ConnectionSettings, InfluxDBProfileManager
 from esdl.profiles.profilemanager import ProfileManager
+from esdl.units.conversion import equals
 
 profile_data_cache: dict[str, tuple[list, list | None]] = {}
 
@@ -90,7 +91,6 @@ def _influxdbprofile_to_datatableprofile(
         type=DatabaseTypeEnum.INFLUXDB,
         host=profile.host,
         port=profile.port,
-        tls=False,
     )
 
     return dtp
@@ -98,8 +98,6 @@ def _influxdbprofile_to_datatableprofile(
 
 def _get_referenced_profile(profile: GenericProfile) -> GenericProfile:
     """Return the profile referenced by the given profile."""
-    if not hasattr(profile, "reference"):
-        raise TypeError(f"ProfileReference '{profile.id}': missing 'reference' attribute.")
     if isinstance(profile.reference, ProfileReference):
         return _get_referenced_profile(profile.reference)
     return profile.reference
@@ -191,6 +189,82 @@ def attr_matches(left, right, attr_name):
     return left_value == right_value
 
 
+def get_energy_system_information(es: EnergySystem) -> EnergySystemInformation:
+    """Get EnergySystemInformation, create if not exists."""
+    esi = es.energySystemInformation
+    if not esi:
+        esi = EnergySystemInformation(id=str(uuid.uuid4()))
+        es.energySystemInformation = esi
+    return esi
+
+
+def get_quantity_and_unit_reference(
+    es: EnergySystem, quantity_and_unit_type: QuantityAndUnitType
+) -> QuantityAndUnitReference:
+    """Get a reference to the quantity and unit, add to the energy system information if not exists."""
+    esi = get_energy_system_information(es)
+
+    if not esi.quantityAndUnits:
+        esi.quantityAndUnits = QuantityAndUnits(id=str(uuid.uuid4()))
+
+    existing_qau = next(
+        (
+            existing_qau
+            for existing_qau in esi.quantityAndUnits.quantityAndUnit
+            if equals(existing_qau, quantity_and_unit_type)
+        ),
+        None,
+    )
+    if existing_qau is None:
+        if not hasattr(quantity_and_unit_type, "id") or not quantity_and_unit_type.id:
+            quantity_and_unit_type.id = str(uuid.uuid4())
+        esi.quantityAndUnits.quantityAndUnit.append(quantity_and_unit_type)
+    else:
+        quantity_and_unit_type = existing_qau
+    return QuantityAndUnitReference(reference=quantity_and_unit_type)
+
+
+def create_time_series_profile(
+    es: EnergySystem,
+    start_date: datetime,
+    timestep_in_seconds: int,
+    values: list[float],
+    profile_type: "ProfileTypeEnum | None" = None,  # type: ignore[valid-type]
+    quantity_and_unit_type: QuantityAndUnitType | None = None,
+    data_source: DataSource | None = None,
+) -> TimeSeriesProfile:
+    """Create and return a TimeSeriesProfile instance.
+
+    The function also checks and reuses the associated QuantityAndUnit as a reference,
+    if it already exists in the existing energy system information.
+
+    :param es: Energy system used to register the quantity and unit reference.
+    :param start_date: Start datetime for the time series profile.
+    :param timestep_in_seconds: Timestep between successive values, in seconds.
+    :param values: Profile values to store in the time series profile.
+    :param profile_type: Optional profile type for the created profile.
+    :param quantity_and_unit_type: Optional quantity and unit definition to attach.
+    :param data_source: Optional data source information to attach.
+    :return: created TimeSeriesProfile instance.
+    """
+    time_series_profile = TimeSeriesProfile(
+        id=str(uuid.uuid4()),
+        startDateTime=start_date,
+        timestep=timestep_in_seconds,
+        values=values,
+        profileType=profile_type,
+        dataSource=data_source,
+    )
+    if quantity_and_unit_type:
+        qua_reference = get_quantity_and_unit_reference(es, quantity_and_unit_type)
+        time_series_profile.profileQuantityAndUnit = qua_reference
+    if data_source:
+        time_series_profile.dataSource = data_source
+    if profile_type:
+        time_series_profile.profileType = profile_type
+    return time_series_profile
+
+
 def create_data_table_profile(
     es: EnergySystem,
     database_name: str,
@@ -201,14 +275,17 @@ def create_data_table_profile(
     db_host: str,
     db_port: int | None = None,
     filter: str | None = None,
+    schema: str | None = None,
     multiplier: float = 1.0,
     db_type=DatabaseTypeEnum.POSTGRESQL,  # EEnumLiteral cannnot be typed, so check if used in function
     profile_type: "ProfileTypeEnum | None" = None,  # type: ignore[valid-type]
     quantity_and_unit_type: QuantityAndUnitType | None = None,
     data_source: DataSource | None = None,
 ) -> DataTableProfile:
-    """Create and add DataTableProfile to a port, and related database configuration to the energy system information
-      if not already present.
+    """Create and return a DataTableProfile instance.
+
+    The function also checks and reuses the associated DatabaseConfiguration, or QuantityAndUnit as a reference,
+    if it already exists in the existing energy system information.
 
     :param es: energy system.
     :param database_name: database name for the configuration.
@@ -219,12 +296,13 @@ def create_data_table_profile(
     :param db_host: database host.
     :param db_port: database port, default is None.
     :param filter: filter string for the profile, default is None.
+    :param schema: optional database schema, default is None.
     :param multiplier: multiplier, default is 1.0.
     :param db_type: database type: one of [DatabaseTypeEnum.POSTGRESQL, DatabaseTypeEnum.INFLUXDB], default is DatabaseTypeEnum.POSTGRESQL.
     :param profile_type: optional profile type for this profile, default is None.
-    :param quantity_and_unit_type: quantity and unit type reference, default is None.
+    :param quantity_and_unit_type: optional quantity and unit type , default is None.
     :param data_source: optional data source information for this profile, default is None.
-    :return: created and attached data table profile.
+    :return: created DataTableProfile instance.
     """
     if db_type not in {DatabaseTypeEnum.POSTGRESQL, DatabaseTypeEnum.INFLUXDB}:
         raise ValueError("DataTableProfile type must be DatabaseTypeEnum.POSTGRESQL or DatabaseTypeEnum.INFLUXDB")
@@ -239,11 +317,7 @@ def create_data_table_profile(
         filter=filter,
     )
 
-    # ensure EnergySystemInformation exists in the ESDL
-    esi = es.energySystemInformation
-    if not esi:
-        esi = EnergySystemInformation(id=str(uuid.uuid4()))
-        es.energySystemInformation = esi
+    esi = get_energy_system_information(es)
     # ensure DataConfigurations container exists in EnergySystemInformation
     if not esi.dataconfigurations:
         esi.dataconfigurations = DataConfigurations(id=str(uuid.uuid4()))
@@ -254,6 +328,8 @@ def create_data_table_profile(
         database=database_name,
         host=db_host,
     )
+    if schema is not None:
+        db_config.schema = schema
     if db_port is not None:
         db_config.port = db_port
 
@@ -282,37 +358,8 @@ def create_data_table_profile(
     data_table_profile.configuration = db_config
 
     if quantity_and_unit_type:
-        # Ensure QuantityAndUnits container exists in EnergySystemInformation
-        if not esi.quantityAndUnits:
-            esi.quantityAndUnits = QuantityAndUnits(id=str(uuid.uuid4()))
-
-        # Add the quantity and unit to the global registry only if it does not already exist.
-        qau_match_attributes = [
-            "description",
-            "multiplier",
-            "perMultiplier",
-            "perScope",
-            "perTimeUnit",
-            "perUnit",
-            "physicalQuantity",
-            "unit",
-        ]
-
-        existing_qau = next(
-            (
-                qau
-                for qau in esi.quantityAndUnits.quantityAndUnit
-                if all(attr_matches(qau, quantity_and_unit_type, attr_name) for attr_name in qau_match_attributes)
-            ),
-            None,
-        )
-        if existing_qau is None:
-            if not hasattr(quantity_and_unit_type, "id") or not quantity_and_unit_type.id:
-                quantity_and_unit_type.id = str(uuid.uuid4())
-            esi.quantityAndUnits.quantityAndUnit.append(quantity_and_unit_type)
-        else:
-            quantity_and_unit_type = existing_qau
-        data_table_profile.profileQuantityAndUnit = QuantityAndUnitReference(reference=quantity_and_unit_type)
+        qua_reference = get_quantity_and_unit_reference(es, quantity_and_unit_type)
+        data_table_profile.profileQuantityAndUnit = qua_reference
 
     if data_source:
         data_table_profile.dataSource = data_source

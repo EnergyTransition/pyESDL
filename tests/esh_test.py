@@ -14,26 +14,21 @@
 import copy
 import unittest
 import uuid
-
-from pyecore.ecore import EObject
-from pyecore.resources import ResourceSet, URI
-from esdl.resources.xmi import XMIResource
-
-from esdl.esdl_handler import EnergySystemHandler, StringURI
-from esdl import esdl, EnergySystemInformation, Carriers
 from pprint import pprint
 
-from esdl.resources.xmlresource import XMLResource
+from esdl import Carriers, EnergySystemInformation, esdl
+from esdl.esdl_handler import EnergySystemHandler, StringURI
 
 
 class TestPyESDL(unittest.TestCase):
-
     def test_print_version(self):
-        print('pyESDL version', EnergySystemHandler.version())
+        print("pyESDL version", EnergySystemHandler.version())
 
     def test_esh(self):
         esh = EnergySystemHandler()
-        es = esh.create_empty_energy_system(name="Nice", es_description="Description", inst_title="Instance0", area_title='Area1')
+        es = esh.create_empty_energy_system(
+            name="Nice", es_description="Description", inst_title="Instance0", area_title="Area1"
+        )
         print(es)
         copy = es.deepcopy()
         pprint(copy)
@@ -45,26 +40,31 @@ class TestPyESDL(unittest.TestCase):
         # Attribute 'trype' does not exists for type WindTurbine and is ignored (asset line 5).
         print("Expect warning: Attribute 'trype' does not exists for type WindTurbine and is ignored (asset line 5).")
         try:
-            esh.load_file('test_attr_error.esdl')
-        except FileNotFoundError as e:  # when running from command line
-            esh.load_file('tests/test_attr_error.esdl')
-        self.assertEqual(["Attribute 'trype' does not exists for type WindTurbine and is ignored (asset line 5)."], esh.resource.get_parse_information())
+            esh.load_file("data/test_attr_error.esdl")
+        except FileNotFoundError:  # when running from command line
+            esh.load_file("tests/data/test_attr_error.esdl")
+        self.assertEqual(
+            ["Attribute 'trype' does not exists for type WindTurbine and is ignored (asset line 5)."],
+            esh.resource.get_parse_information(),
+        )
 
     def test_example1(self):
         esh = EnergySystemHandler()
-        es = esh.create_empty_energy_system(name="ES1", es_description='Nice Energy System',
-                                            inst_title='instance 1', area_title="Area 51")
+        es = esh.create_empty_energy_system(
+            name="ES1", es_description="Nice Energy System", inst_title="instance 1", area_title="Area 51"
+        )
         print(es)
         esh.save(filename="test.esdl")
 
     def test_example2(self):
         esh = EnergySystemHandler()
         # load an ESDL file and use type hinting to help the IDE to do auto completion
-        es = esh.load_file('test.esdl')
+        es = esh.load_file("test.esdl")
         print(es)
         # Create a WindTurbine
-        wind_turbine = esdl.WindTurbine(name='WindTurbine at coast', rotorDiameter=50.0, height=100.0,
-                                        type=esdl.WindTurbineTypeEnum.WIND_ON_COAST)
+        wind_turbine = esdl.WindTurbine(
+            name="WindTurbine at coast", rotorDiameter=50.0, height=100.0, type=esdl.WindTurbineTypeEnum.WIND_ON_COAST
+        )
 
         # print the wind turbines properties in ESDL as a dict
         pprint(esh.attr_to_dict(wind_turbine))
@@ -120,8 +120,8 @@ class TestPyESDL(unittest.TestCase):
 
     def test_deepcopy_with_context(self):
         esh = EnergySystemHandler()
-        es = esh.load_file('tests/Test_ES_deepcopy.esdl')
-        gen_cons = esh.get_by_id('87d5b022-e509-4620-9d99-5f67eaf91848')
+        es = esh.load_file("tests/data/Test_ES_deepcopy.esdl")
+        gen_cons = esh.get_by_id("87d5b022-e509-4620-9d99-5f67eaf91848")
         cons_copy = gen_cons.deepcopy()
         es2 = esh.create_empty_energy_system(name="target ES")
         es2.energySystemInformation = EnergySystemInformation(id=str(uuid.uuid4()))
@@ -141,57 +141,57 @@ class TestPyESDL(unittest.TestCase):
         print("IDs in the two energysystems:")
         print("---------------")
         for item in es.eAllContents():
-            if hasattr(item, 'id'):
+            if hasattr(item, "id"):
                 print(item.eClass.__name__, item.id)
         print("---------------")
         for item in es2.eAllContents():
-            if hasattr(item, 'id'):
+            if hasattr(item, "id"):
                 print(item.eClass.__name__, item.id)
 
     def test_deepcopy_simple(self):
         import pyecore
-        print('PyEcore version:', pyecore.__version__)
+
+        print("PyEcore version:", pyecore.__version__)
         esh = EnergySystemHandler()
-        es = esh.load_file('tests/Test_ES_deepcopy.esdl')
-        gen_cons = esh.get_by_id('87d5b022-e509-4620-9d99-5f67eaf91848')
+        es = esh.load_file("tests/data/Test_ES_deepcopy.esdl")
+        gen_cons = esh.get_by_id("87d5b022-e509-4620-9d99-5f67eaf91848")
         cons_copy = gen_cons.deepcopy()
         for item in gen_cons.eAllContents():
-            if hasattr(item, 'id'):
+            if hasattr(item, "id"):
                 print(item.eClass.__name__, item.id)
         print("---------------")
         for item in cons_copy.eAllContents():
-            if hasattr(item, 'id'):
+            if hasattr(item, "id"):
                 print(item.eClass.__name__, item.id)
 
-        #rs = ResourceSet()
-        #u = StringURI("string.json")
-        #r = rs.create_resource(u)
-        #r.append(cons_copy)
-        #r.save(u)
-        #import json
-        #print(pprint(json.loads(u.getvalue())))
+        # rs = ResourceSet()
+        # u = StringURI("string.json")
+        # r = rs.create_resource(u)
+        # r.append(cons_copy)
+        # r.save(u)
+        # import json
+        # print(pprint(json.loads(u.getvalue())))
 
     def test_deepcopy_windturbine_pyecore014_issue(self):
         import pyecore
-        print('PyEcore version:', pyecore.__version__)
+
+        print("PyEcore version:", pyecore.__version__)
         esh = EnergySystemHandler()
-        wt:esdl.WindTurbine = esh.load_file('tests/windturbine_pyecore014_issue_values.esdl')
-        #rset = ResourceSet()
-        #rset.resource_factory['esdl'] = lambda uri: XMIResource(uri)
-        #rset.resource_factory['xmlesdl'] = lambda uri: XMLResource(uri)
-        #resource = rset.get_resource(URI('tests/windturbine_pyecore014_issue_values.esdl'))
+        wt: esdl.WindTurbine = esh.load_file("tests/data/windturbine_pyecore014_issue_values.esdl")
+        # rset = ResourceSet()
+        # rset.resource_factory['esdl'] = lambda uri: XMIResource(uri)
+        # rset.resource_factory['xmlesdl'] = lambda uri: XMLResource(uri)
+        # resource = rset.get_resource(URI('tests/data/windturbine_pyecore014_issue_values.esdl'))
         # At this point, the model instance is loaded!
-        #wt = resource.contents[0]
+        # wt = resource.contents[0]
         table = wt.powerCurveTable
         print(table.row[0].value)
         print(table.row[1].value)
-        uri = StringURI('to_string.esdl')
-        #resource = rset.create_resource(uri)
-        #resource.append(wt)
-        #resource.save(uri)
+        uri = StringURI("to_string.esdl")
+        # resource = rset.create_resource(uri)
+        # resource.append(wt)
+        # resource.save(uri)
         # return the string
-        #print( uri.getvalue())
+        # print( uri.getvalue())
         string = esh.to_string()
         print(string)
-
-

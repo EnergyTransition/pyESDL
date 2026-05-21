@@ -1,6 +1,11 @@
 Release notes
 =============
 
+Version 26.5
+--------------
+- Add general profile parsing and adding/writing to database functions, including profile data caching
+- Add automated testing with postgres/influxdb databases
+
 Version 26.4.1
 --------------
 - Fix bug of table index creation error in postgresql configuration

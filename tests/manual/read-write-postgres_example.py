@@ -94,7 +94,7 @@ def write_data_to_postgres():
 
 
 if __name__ == "__main__":
-    # esdl.profiles.data_configurations.postgresql.DEBUG_SQL = True
+    # esdl.profiles.data_configurations.postgresql_datatable_manager.DEBUG_SQL = True
     write_data_to_postgres()
     read_data_from_postgres()
     query_data_from_postgres()

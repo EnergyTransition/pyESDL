@@ -22,7 +22,7 @@ from pyecore.ecore import EDate
 import esdl
 from esdl import DataTableProfile
 from esdl.profiles.credentials import Credentials
-from esdl.profiles.data_configurations.postgresql import (
+from esdl.profiles.data_configurations.postgresql_datatable_manager import (
     DataTableMetaData,
     PostgresqlDataTableManager,
 )

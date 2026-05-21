@@ -52,14 +52,6 @@ To install the dependencies for handling geometries:
 
 ## Documentation
 
-To have a live view of the documentation install `docs/requirements.txt` and from root folder run:
-
-```bash
-sphinx-autobuild docs/source docs/build/html
-```
-
-Then go to `localhost:8000`.
-
 We will start soon with generating more documentation on [readthedocs](https://pyesdl.readthedocs.io/).
 
 ## Usage
@@ -130,6 +122,11 @@ Creating QuantityAndUnitTypes from strings is also possible using `build_qau_fro
 E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh" as unit.
 
 ## Changes
+
+## Version 26.5
+
+- Add general profile parsing and adding/writing to database functions, including profile data caching
+- Add automated testing with postgres/influxdb databases
 
 ## Version 26.4.1
 

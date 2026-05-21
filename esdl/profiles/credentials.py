@@ -52,7 +52,7 @@ class Credentials:
         if credential is None:
             logging.debug(
                 f"No associated credentials found from DataConfiguration.id '{configuration.id}' or"
-                f" DataConfiguration.host '{configuration.host}'."
+                f" DataConfiguration.host '{configuration.host}:{configuration.port if configuration.port else 'None'}'."
                 f" Assuming a public database and attempting to connect without credentials."
             )
 

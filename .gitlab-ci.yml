@@ -1,10 +1,50 @@
 test:
   stage: test
   image: python:3.10-slim
+  services:
+    - name: postgis/postgis:17-master
+      alias: postgres
+    - name: influxdb:1.7
+      alias: influxdb
+  variables:
+    POSTGRES_DB: energy_profiles
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: password
+    INFLUXDB_ADMIN_USER: admin
+    INFLUXDB_ADMIN_PASSWORD: admin
+    PYESDL_POSTGRES_HOST: postgres
+    PYESDL_POSTGRES_PORT: "5432"
+    PYESDL_POSTGRES_USER: postgres
+    PYESDL_POSTGRES_PASSWORD: password
+    PYESDL_INFLUXDB_HOST: influxdb
+    PYESDL_INFLUXDB_PORT: "8086"
+    PYESDL_INFLUXDB_USER: admin
+    PYESDL_INFLUXDB_PASSWORD: admin
   before_script:
     - 'apt-get update && apt-get install -y curl git'
     - 'python3 -m pip install --user --upgrade setuptools wheel twine versioneer future-fstrings'
     - 'python3 -m pip install --user -r requirements.txt'
+    - |
+      python3 - <<'PY'
+      import socket
+      import time
+
+      def wait_for(host, port, timeout=180):
+          deadline = time.time() + timeout
+          while time.time() < deadline:
+              with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                  s.settimeout(2)
+                  try:
+                      s.connect((host, port))
+                      return
+                  except OSError:
+                      time.sleep(2)
+          raise RuntimeError(f"Service not reachable: {host}:{port}")
+
+      wait_for("postgres", 5432)
+      wait_for("influxdb", 8086)
+      print("Database services are reachable")
+      PY
   script:
     - 'git describe'
     - 'echo $CI_COMMIT_TAG'

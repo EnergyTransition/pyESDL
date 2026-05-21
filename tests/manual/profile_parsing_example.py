@@ -1,8 +1,8 @@
 import logging
+import os
 import uuid
 from datetime import datetime
-
-import pandas as pd
+from pathlib import Path
 
 import esdl
 from esdl.esdl_handler import EnergySystemHandler
@@ -11,6 +11,7 @@ from esdl.profiles.datatableprofilemanager import DataTableProfileManager
 from esdl.profiles.profile_utils import (
     close_db_connections,
     create_data_table_profile,
+    create_time_series_profile,
     load_profile_data_and_header,
     save_data_table_profiles_to_database,
 )
@@ -32,13 +33,23 @@ def add_port_to_asset(asset):
 
 if __name__ == "__main__":
     # ================================================================================= #
-    #  first start databases locally: run `docker compose up --wait` in `tests` folder  #
+    #  first start databases locally: run `docker compose up --wait` in `root` folder  #
     # ================================================================================= #
 
     # set db credentials
     logging.basicConfig(level=logging.INFO)
-    Credentials.add_credential("localhost:1432", "postgres", "password")
-    Credentials.add_credential("localhost:1086", "admin", "admin")
+    postgres_host = os.getenv("PYESDL_POSTGRES_HOST", "localhost")
+    postgres_port = int(os.getenv("PYESDL_POSTGRES_PORT", "1432"))
+    postgres_user = os.getenv("PYESDL_POSTGRES_USER", "postgres")
+    postgres_password = os.getenv("PYESDL_POSTGRES_PASSWORD", "password")
+
+    influxdb_host = os.getenv("PYESDL_INFLUXDB_HOST", "localhost")
+    influxdb_port = int(os.getenv("PYESDL_INFLUXDB_PORT", "1086"))
+    influxdb_user = os.getenv("PYESDL_INFLUXDB_USER", "admin")
+    influxdb_password = os.getenv("PYESDL_INFLUXDB_PASSWORD", "admin")
+
+    Credentials.add_credential(f"{postgres_host}:{postgres_port}", postgres_user, postgres_password)
+    Credentials.add_credential(f"{influxdb_host}:{influxdb_port}", influxdb_user, influxdb_password)
 
     # use 'model run id' as database name and 'carrier network id' as table name
     model_run_id = str(uuid.uuid4())
@@ -46,18 +57,19 @@ if __name__ == "__main__":
 
     # =================
     # get data from CSV
-    df = pd.read_csv("test_profile.csv")
-    datetime_col = "datetime" if "datetime" in df.columns else df.columns[0]
-    df[datetime_col] = pd.to_datetime(
-        df[datetime_col].astype(str).str.strip().str.strip("'").str.strip('"'),
-        utc=True,
-    ).dt.to_pydatetime()
+    csv_path = Path(__file__).resolve().parents[1] / "data" / "test_profile.csv"
+    csv_profile = esdl.DataTableProfile(
+        id=str(uuid.uuid4()),
+        configuration=esdl.FileConfiguration(uri=str(csv_path), type=esdl.FileTypeEnum.CSV),
+    )
+    csv_profile_manager = DataTableProfileManager.load(csv_profile)
 
-    profile_header1 = [datetime_col, df.columns[1]]
-    profile_data_list1 = df[[datetime_col, df.columns[1]]].values.tolist()
+    datetime_col = csv_profile_manager.profile_header[0]
+    profile_header1 = [datetime_col, csv_profile_manager.profile_header[1]]
+    profile_data_list1 = [[row[0], row[1]] for row in csv_profile_manager.profile_data_list]
 
-    profile_header2 = [datetime_col, df.columns[2]]
-    profile_data_list2 = df[[datetime_col, df.columns[2]]].values.tolist()
+    profile_header2 = [datetime_col, csv_profile_manager.profile_header[2]]
+    profile_data_list2 = [[row[0], row[2]] for row in csv_profile_manager.profile_data_list]
 
     print(f"Profile 1 Header: {profile_header1}")
     print(f"Profile 1 Data (first 2 rows): {profile_data_list1[:2]}")
@@ -100,13 +112,13 @@ if __name__ == "__main__":
         column_name="column1",  # column header in "test_profile.csv"
         start_date=datetime(2019, 1, 1),
         end_date=datetime(2019, 1, 2),
-        db_host="localhost",
-        db_port=1432,  # optional
+        db_host=postgres_host,
+        db_port=postgres_port,  # optional
         # filter optional: needed if profiles for multiple assets are written to the same table_name
         filter='"assetId"=' + f"'{str(electricity_demand1.id)}'",
         multiplier=2.0,  # optional: default is 1.0
         db_type=esdl.DatabaseTypeEnum.POSTGRESQL,  # default: other option DatabaseTypeEnum.INFLUXDB
-        profile_type=esdl.ProfileTypeEnum.OUTPUT,  # default: other option esdl.ProfileTypeEnum.POINTS
+        profile_type=esdl.ProfileTypeEnum.OUTPUT,  # default: other option esdl.ProfileTypeEnum.INPUTS/UNDEFINED
         quantity_and_unit_type=qau_power,
     )
     electricity_demand1_port1.profile.append(dtp_postgres1)
@@ -118,8 +130,8 @@ if __name__ == "__main__":
         column_name="column2",
         start_date=datetime(2019, 1, 1),
         end_date=datetime(2019, 1, 2),
-        db_host="localhost",
-        db_port=1432,
+        db_host=postgres_host,
+        db_port=postgres_port,
         filter='"assetId"=' + f"'{str(electricity_demand1.id)}'",
         db_type=esdl.DatabaseTypeEnum.POSTGRESQL,
         quantity_and_unit_type=qau_power,
@@ -133,8 +145,8 @@ if __name__ == "__main__":
         column_name="column1",
         start_date=datetime(2019, 1, 1),
         end_date=datetime(2019, 1, 2),
-        db_host="localhost",
-        db_port=1086,
+        db_host=influxdb_host,
+        db_port=influxdb_port,
         filter='"assetId"=' + f"'{str(electricity_demand2.id)}'",
         db_type=esdl.DatabaseTypeEnum.INFLUXDB,
         quantity_and_unit_type=qau_power,
@@ -148,18 +160,21 @@ if __name__ == "__main__":
         column_name="column2",
         start_date=datetime(2019, 1, 1),
         end_date=datetime(2019, 1, 2),
-        db_host="localhost",
-        db_port=1086,
+        db_host=influxdb_host,
+        db_port=influxdb_port,
         filter='"assetId"=' + f"'{str(electricity_demand2.id)}'",
         db_type=esdl.DatabaseTypeEnum.INFLUXDB,
         quantity_and_unit_type=qau_power,
     )
     electricity_demand2_port2.profile.append(dtp_influx2)
 
-    time_series_profile = esdl.TimeSeriesProfile(
-        startDateTime=datetime(2019, 1, 1),
-        timestep=3600,  # in seconds
+    time_series_profile = create_time_series_profile(
+        es=es,
+        start_date=datetime(2019, 1, 1),
+        timestep_in_seconds=3600,
         values=[row[1] for row in profile_data_list1],
+        profile_type=esdl.ProfileTypeEnum.OUTPUT,
+        quantity_and_unit_type=qau_power,
     )
     electricity_demand2_port3.profile.append(time_series_profile)
 
