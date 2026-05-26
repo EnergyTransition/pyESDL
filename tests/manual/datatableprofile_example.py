@@ -1,22 +1,19 @@
 import esdl
-from esdl import DatabaseConfiguration
 from esdl.profiles.credentials import Credentials
 from esdl.profiles.datatableprofilemanager import DataTableProfileManager
 from esdl.support_functions import deepcopy
-from esdl.units.conversion import POWER_IN_kW, equals
-from esdl.units.parser import qau_to_string
+from esdl.units.conversion import POWER_IN_kW
 
-# enable for SQL debugging
-#esdl.profiles.data_configurations.postgresql.DEBUG_SQL = True
+esdl.profiles.data_configurations.postgresql_datatable_manager.DEBUG_SQL = True  # does not work
 
 if __name__ == "__main__":
     # create a new datatable profile with data from e.g. excel or csv
     dtp = esdl.DataTableProfile(name="test profile", id="test")
-    dtp.configuration = esdl.FileConfiguration(uri="test_profile.csv", type=esdl.FileTypeEnum.CSV)
+    dtp.configuration = esdl.FileConfiguration(uri="data/test_profile.csv", type=esdl.FileTypeEnum.CSV)
     dtpman = DataTableProfileManager.load(dtp)
 
     print(dtpman.profile_header)
-    print(dtpman.profile_data_list[:3])
+    print(dtpman.profile_data_list)
     columnName = "column2"
     print(dtpman.get_esdl_timeseries_profile(columnName).values)
 
@@ -31,58 +28,58 @@ if __name__ == "__main__":
         host="localhost",
         port=5432,
     )
-    Credentials.add_credential("my_database", "drive", "password")
+    Credentials.add_credential("my_database", "postgres", "password")
 
     # save data in database configured in dtp.configuration
     dtpman.save()
 
-    # load data from postgres
-    dtp2 = esdl.DataTableProfile(
-        name="test profile", id="test", columnName=columnName, tableName="test_profile", schema="public"
-    )
-    dtp2.configuration = esdl.DatabaseConfiguration(
-        type=esdl.DatabaseTypeEnum.POSTGRESQL, id="my_database", database="datatableprofile2", host="localhost"
-    )
-    dtpm2 = DataTableProfileManager(dtp2)
-    Credentials.add_credential("my_database", "drive", "password")
-    dtpm2.load_from_database()
-    print([value[1] for value in dtpm2.profile_data_list])
+    # # load data from postgres
+    # dtp2 = esdl.DataTableProfile(
+    #     name="test profile", id="test", columnName=columnName, tableName="test_profile", schema="public"
+    # )
+    # dtp2.configuration = esdl.DatabaseConfiguration(
+    #     type=esdl.DatabaseTypeEnum.POSTGRESQL, id="my_database", database="datatableprofile2", host="localhost"
+    # )
+    # dtpm2 = DataTableProfileManager(dtp2)
+    # Credentials.add_credential("my_database", "drive", "password")
+    # dtpm2.load_from_database()
+    # print([value[1] for value in dtpm2.profile_data_list])
 
-    # load data from CSV into postgres from an ESDL DataTable profile definition
-    dtp = esdl.DataTableProfile(name="test profile", id="test", tableName="csv_data_table")
-    dtp.profileQuantityAndUnit = POWER_IN_kW.deepcopy()
-    dtp.configuration = esdl.FileConfiguration(uri="test_profile.csv", type=esdl.FileTypeEnum.CSV)
-    dtpman = DataTableProfileManager.load(dtp)
-    print(dtpman.profile_header)
-    nw_table_config = DatabaseConfiguration(
-        name="nw_table",
-        id="postgres_db",
-        database="datatableprofile",
-        type=esdl.DatabaseTypeEnum.POSTGRESQL,
-        host="localhost",
-    )
-    dtp.configuration = nw_table_config
-    dtp.schema = "essim_run_20250804"
-    Credentials.add_credential("postgres_db", "drive", "password")
-    dtpman.save()
+    # # load data from CSV into postgres from an ESDL DataTable profile definition
+    # dtp = esdl.DataTableProfile(name="test profile", id="test", tableName="csv_data_table")
+    # dtp.profileQuantityAndUnit = POWER_IN_kW.deepcopy()
+    # dtp.configuration = esdl.FileConfiguration(uri="data/test_profile.csv", type=esdl.FileTypeEnum.CSV)
+    # dtpman = DataTableProfileManager.load(dtp)
+    # print(dtpman.profile_header)
+    # nw_table_config = DatabaseConfiguration(
+    #     name="nw_table",
+    #     id="postgres_db",
+    #     database="datatableprofile",
+    #     type=esdl.DatabaseTypeEnum.POSTGRESQL,
+    #     host="localhost",
+    # )
+    # dtp.configuration = nw_table_config
+    # dtp.schema = "essim_run_20250804"
+    # Credentials.add_credential("postgres_db", "drive", "password")
+    # dtpman.save()
 
-    print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-    # load the same data from postgres and check the unit
-    # setting the unit manually should not be needed.
-    my_dtp = esdl.DataTableProfile(
-        name="my profile", id="test", tableName="csv_data_table", columnName="column1", schema="essim_run_20250804"
-    )
-    my_dtp.configuration = esdl.DatabaseConfiguration(
-        type=esdl.DatabaseTypeEnum.POSTGRESQL,
-        name="test configuration",
-        id="postgres_db",
-        host="localhost",
-        database="datatableprofile",
-    )
-    Credentials.add_credential(my_dtp.configuration.id, "drive", "password")
-    dtpmanager = DataTableProfileManager.load(my_dtp)
-    print(qau_to_string(dtp.profileQuantityAndUnit))
-    assert equals(POWER_IN_kW, dtp.profileQuantityAndUnit)
+    # print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    # # load the same data from postgres and check the unit
+    # # setting the unit manually should not be needed.
+    # my_dtp = esdl.DataTableProfile(
+    #     name="my profile", id="test", tableName="csv_data_table", columnName="column1", schema="essim_run_20250804"
+    # )
+    # my_dtp.configuration = esdl.DatabaseConfiguration(
+    #     type=esdl.DatabaseTypeEnum.POSTGRESQL,
+    #     name="test configuration",
+    #     id="postgres_db",
+    #     host="localhost",
+    #     database="datatableprofile",
+    # )
+    # Credentials.add_credential(my_dtp.configuration.id, "drive", "password")
+    # dtpmanager = DataTableProfileManager.load(my_dtp)
+    # print(qau_to_string(dtp.profileQuantityAndUnit))
+    # assert equals(POWER_IN_kW, dtp.profileQuantityAndUnit)
 
     # print("----------------------- get scaled profile data from Postgres -----------------------")
 

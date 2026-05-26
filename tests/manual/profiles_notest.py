@@ -13,18 +13,15 @@
 #      TNO
 
 import unittest
-from datetime import datetime
-from uuid import uuid4
 
-from pyecore.utils import alias
+from pyecore.resources import URI, ResourceSet
 
 from esdl import esdl
 from esdl.esdl_handler import StringURI
+
 # from esdl.profiles.excelprofilemanager import ExcelProfileManager
 # from esdl.profiles.influxdbprofilemanager import InfluxDBProfileManager, ConnectionSettings
 from esdl.profiles.profilemanager import ProfileManager
-
-from pyecore.resources import ResourceSet, URI
 
 
 def get_esdl_string(object):
@@ -32,26 +29,25 @@ def get_esdl_string(object):
     resource = rset.create_resource(URI("test.esdl"))
     resource.append(object)
 
-    uri = StringURI('to_string.esdl')
+    uri = StringURI("to_string.esdl")
     resource.save(uri)
     return uri.getvalue()
 
 
 class ESDLUnitTest(unittest.TestCase):
-
     def test_load_csv_profile_data(self):
         print("Load profile data from a CSV...")
         profile = ProfileManager()
-        profile.load_csv("test_profile.csv")
+        profile.load_csv("data/test_profile.csv")
         self.assertEqual(profile.num_profile_items, 4)
 
         print("Generate an esdl.TimeSeriesProfile...")
-        ts_prof = profile.get_esdl_timeseries_profile('column1')
+        ts_prof = profile.get_esdl_timeseries_profile("column1")
         print(get_esdl_string(ts_prof))
         self.assertTrue(isinstance(ts_prof, esdl.TimeSeriesProfile))
 
         print("Generate an esdl.DateTimeProfile...")
-        dt_prof = profile.get_esdl_datetime_profile('column2')
+        dt_prof = profile.get_esdl_datetime_profile("column2")
         print(get_esdl_string(dt_prof))
         self.assertTrue(isinstance(dt_prof, esdl.DateTimeProfile))
         self.assertEqual(dt_prof.element[0].value, 45)
@@ -60,7 +56,7 @@ class ESDLUnitTest(unittest.TestCase):
 
     # def test_influxdbprofile(self):
     #     profile = ProfileManager()
-    #     profile.load_csv("test_profile.csv")
+    #     profile.load_csv("data/test_profile.csv")
     #
     #     conn_settings = ConnectionSettings(
     #         host="localhost",

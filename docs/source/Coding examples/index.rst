@@ -12,3 +12,4 @@ Coding examples
    create an ESDL object with the class name as a string
    converting pandas to influxdb
    assigning and querying datatableprofile
+   profile parsing and loading profile types

@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "datatableprofile_example.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tests/manual/datatableprofile_example.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/tests",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/tests"
+            }
+        },
+        {
+            "name": "Pytest",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "-q"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/Python/src"
+            }
+        }
+    ]
+}

@@ -1,0 +1,46 @@
+name: "pyesdl-tests"
+
+volumes:
+  pyesdl_influxdb_storage:
+    name: "pyesdl_influxdb_storage"
+    driver: local
+  pyesdl_postgres_storage:
+    name: "pyesdl_postgres_storage"
+    driver: local
+
+services:
+  influxdb:
+    image: influxdb:1.7
+    restart: unless-stopped
+    ports:
+      - "${INFLUXDB_PORT:-1086}:8086"
+      - "${INFLUXDB_RPC_PORT:-1088}:8088"
+    environment:
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+    volumes:
+      - pyesdl_influxdb_storage:/var/lib/influxdb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://influxdb:8086/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  postgres:
+    image: postgis/postgis:17-master
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-1432}:5432"
+    volumes:
+      - pyesdl_postgres_storage:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-energy_profiles}
+      - POSTGRES_USER=${POSTGRES_DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_DB_PASSWD:-password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
