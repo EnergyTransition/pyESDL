@@ -13,6 +13,7 @@ from esdl.profiles.datatableprofilemanager import DataTableProfileManager
 from esdl.profiles.profile_utils import (
     close_db_connections,
     create_data_table_profile,
+    create_date_time_profile,
     create_time_series_profile,
     load_profile_data_and_header,
     save_data_table_profiles_to_database,
@@ -169,6 +170,7 @@ def profile_fixture():
 
     time_series_profile = create_time_series_profile(
         es=es,
+        name="TimeSeriesProfile1",
         start_date=datetime(2019, 1, 1),
         timestep_in_seconds=3600,
         values=[row[1] for row in profile_data_list1],
@@ -176,6 +178,15 @@ def profile_fixture():
         quantity_and_unit_type=qau_power,
     )
     electricity_demand2_port3.profile.append(time_series_profile)
+
+    date_time_profile = create_date_time_profile(
+        es=es,
+        name="DateTimeProfile1",
+        datetime_and_values=profile_data_list1,
+        profile_type=esdl.ProfileTypeEnum.OUTPUT,
+        quantity_and_unit_type=qau_power,
+    )
+    electricity_demand2_port3.profile.append(date_time_profile)
 
     dtp_postgres1_manager = DataTableProfileManager(dtp_postgres1)
     dtp_postgres1_manager.profile_data_list = profile_data_list1
@@ -200,6 +211,7 @@ def profile_fixture():
         "dtp_influx1": dtp_influx1,
         "dtp_influx2": dtp_influx2,
         "time_series_profile": time_series_profile,
+        "date_time_profile": date_time_profile,
         "profile_header1": profile_header1,
         "profile_header2": profile_header2,
         "profile_data_list1": profile_data_list1,
@@ -272,6 +284,16 @@ def test_influxdb_datatable_profile_column2(profile_fixture):
 def test_time_series_profile(profile_fixture):
     data, header = load_profile_data_and_header(profile_fixture["time_series_profile"])
     assert header[0] == "datetime"
+    _assert_first_three_datetimes(
+        data,
+        [row[0] for row in profile_fixture["profile_data_list1"][0:3]],
+    )
+    _assert_first_three_values(data, [23.0, 12.0, 0.3])
+
+
+def test_date_time_profile(profile_fixture):
+    data, header = load_profile_data_and_header(profile_fixture["date_time_profile"])
+    assert header == ["datetime", "DateTimeProfile1"]
     _assert_first_three_datetimes(
         data,
         [row[0] for row in profile_fixture["profile_data_list1"][0:3]],

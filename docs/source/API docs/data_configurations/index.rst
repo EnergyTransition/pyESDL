@@ -5,5 +5,4 @@ Data Configurations
    :maxdepth: 1
    :caption: Data configurations:
 
-   credentials
    postgresql

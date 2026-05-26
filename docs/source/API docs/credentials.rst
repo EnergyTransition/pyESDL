@@ -1,5 +1,5 @@
 Credentials
------------
+===========
 
 .. automodule:: profiles.credentials
    :members:

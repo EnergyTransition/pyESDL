@@ -14,6 +14,7 @@ from esdl import (
     EnergySystemInformation,
     GenericProfile,
     InfluxDBProfile,
+    ProfileElement,
     ProfileReference,
     ProfileTypeEnum,
     QuantityAndUnitReference,
@@ -226,6 +227,7 @@ def get_quantity_and_unit_reference(
 
 def create_time_series_profile(
     es: EnergySystem,
+    name: str,
     start_date: datetime,
     timestep_in_seconds: int,
     values: list[float],
@@ -239,6 +241,7 @@ def create_time_series_profile(
     if it already exists in the existing energy system information.
 
     :param es: Energy system used to register the quantity and unit reference.
+    :param name: Name of the time series profile.
     :param start_date: Start datetime for the time series profile.
     :param timestep_in_seconds: Timestep between successive values, in seconds.
     :param values: Profile values to store in the time series profile.
@@ -249,11 +252,11 @@ def create_time_series_profile(
     """
     time_series_profile = TimeSeriesProfile(
         id=str(uuid.uuid4()),
+        name=name,
         startDateTime=start_date,
         timestep=timestep_in_seconds,
         values=values,
         profileType=profile_type,
-        dataSource=data_source,
     )
     if quantity_and_unit_type:
         qua_reference = get_quantity_and_unit_reference(es, quantity_and_unit_type)
@@ -263,6 +266,64 @@ def create_time_series_profile(
     if profile_type:
         time_series_profile.profileType = profile_type
     return time_series_profile
+
+
+def create_date_time_profile(
+    es: EnergySystem,
+    name: str,
+    datetime_and_values: list[tuple[datetime, float]] | list[list[Any]],
+    profile_type: "ProfileTypeEnum | None" = None,  # type: ignore[valid-type]
+    quantity_and_unit_type: QuantityAndUnitType | None = None,
+    data_source: DataSource | None = None,
+) -> DateTimeProfile:
+    """Create and return a DateTimeProfile instance.
+
+    The function also checks and reuses the associated QuantityAndUnit as a reference,
+    if it already exists in the existing energy system information.
+
+    :param es: Energy system used to register the quantity and unit reference.
+    :param name: Name of the date time profile.
+    :param datetime_and_values: Ordered list containing at least datetime and value
+        in the first two positions of each row.
+    :param profile_type: Optional profile type for the created profile.
+    :param quantity_and_unit_type: Optional quantity and unit definition to attach.
+    :param data_source: Optional data source information to attach.
+    :return: created DateTimeProfile instance.
+    """
+    date_time_profile = DateTimeProfile(
+        id=str(uuid.uuid4()),
+        name=name,
+        profileType=profile_type,
+    )
+
+    append_values_to_date_time_profile(date_time_profile, datetime_and_values)
+
+    if quantity_and_unit_type:
+        qua_reference = get_quantity_and_unit_reference(es, quantity_and_unit_type)
+        date_time_profile.profileQuantityAndUnit = qua_reference
+    if data_source:
+        date_time_profile.dataSource = data_source
+    if profile_type:
+        date_time_profile.profileType = profile_type
+
+    return date_time_profile
+
+
+def append_values_to_date_time_profile(
+    date_time_profile: DateTimeProfile,
+    datetime_and_values: list[tuple[datetime, float]] | list[list[Any]],
+) -> None:
+    """Append date-time values to an existing DateTimeProfile.
+
+    :param date_time_profile: DateTimeProfile to append values to.
+    :param datetime_and_values: Ordered list containing at least datetime and value
+        in the first two positions of each row.
+    """
+    for row in datetime_and_values:
+        if len(row) < 2:
+            raise ValueError("Each datetime_and_values row must contain at least [datetime, value]")
+        dt, value = row[0], row[1]
+        date_time_profile.element.append(ProfileElement(from_=dt, value=value))
 
 
 def create_data_table_profile(

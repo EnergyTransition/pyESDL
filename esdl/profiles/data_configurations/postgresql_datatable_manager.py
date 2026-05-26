@@ -112,9 +112,7 @@ class PostgresqlDataTableManager:
 
             self.connection = psycopg.connect(**connect_kwargs)
         except psycopg.errors.InvalidCatalogName:
-            logging.info(
-                f"Could not connect to PostgreSQL: Database '{connect_kwargs['dbname']}' does not exist yet."
-            )
+            logging.info(f"Could not connect to PostgreSQL: Database '{connect_kwargs['dbname']}' does not exist yet.")
         except psycopg.Error as e:
             logging.error("Error while connecting to PostgreSQL: %s", e)
             if self.connection and not self.connection.closed:

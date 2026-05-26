@@ -2,18 +2,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "profile_parsing_example.py",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/tests/manual/profile_parsing_example.py",
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}/tests",
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/tests"
-            }
-        },
-        {
             "name": "datatableprofile_example.py",
             "type": "debugpy",
             "request": "launch",

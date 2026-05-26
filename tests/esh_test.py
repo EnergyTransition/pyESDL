@@ -12,6 +12,8 @@
 #  Manager:
 #      TNO
 import copy
+import os
+import tempfile
 import unittest
 import uuid
 from pprint import pprint
@@ -21,6 +23,15 @@ from esdl.esdl_handler import EnergySystemHandler, StringURI
 
 
 class TestPyESDL(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp_dir = tempfile.TemporaryDirectory()
+        cls._test_esdl_path = os.path.join(cls._tmp_dir.name, "test.esdl")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmp_dir.cleanup()
+
     def test_print_version(self):
         print("pyESDL version", EnergySystemHandler.version())
 
@@ -54,12 +65,12 @@ class TestPyESDL(unittest.TestCase):
             name="ES1", es_description="Nice Energy System", inst_title="instance 1", area_title="Area 51"
         )
         print(es)
-        esh.save(filename="test.esdl")
+        esh.save(filename=self._test_esdl_path)
 
     def test_example2(self):
         esh = EnergySystemHandler()
         # load an ESDL file and use type hinting to help the IDE to do auto completion
-        es = esh.load_file("test.esdl")
+        es = esh.load_file(self._test_esdl_path)
         print(es)
         # Create a WindTurbine
         wind_turbine = esdl.WindTurbine(
