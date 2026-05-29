@@ -125,6 +125,7 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 ## Version 26.5
 
+- Add support for ESDL release 26.5
 - Add general profile parsing and adding/writing to database functions, including profile data caching
 - Add automated testing with postgres/influxdb databases
 
