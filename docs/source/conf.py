@@ -20,6 +20,7 @@ author = 'Ewoud Werkman, Edwin Matthijssen, Selma Causevic'
 version = _version.get_versions()['version']
 if '+' in version:
     version = version.split('+')[0]  # remove any 'dirty' state information
+print("Building for ESDL version: ", version)
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
