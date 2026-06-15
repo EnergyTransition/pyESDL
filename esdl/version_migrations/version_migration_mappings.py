@@ -16,10 +16,10 @@ version_migration_mapping_rename_attribute: List[RenameAttribute] = [
 
 version_migration_mapping_rename_class: List[RenameClass] = [
     RenameClass(
-        # Example rule to rename a Class in ESDL
+        # In ESDL release 26.5, the BiomassHeater class was replaced by the Heater class
         id="1",
-        class_name="GeothermalSourceOld",
-        class_new_name="GeothermalSource",
+        class_name="BiomassHeater",
+        class_new_name="Heater",
     ),
 ]
 

@@ -35,3 +35,10 @@ class TestVersionMigration(unittest.TestCase):
             self.assertEqual(asset.maximumFlowRate, 3.0)
             print(asset.port[0].profile[0].profileQuantityAndUnit.multiplier)
             self.assertEqual(asset.port[0].profile[0].profileQuantityAndUnit.multiplier, esdl.MultiplierEnum.TERA)
+
+        asset = area.asset[1]
+        if isinstance(asset, esdl.Heater):
+            print(asset.eClass.name)
+            self.assertEqual(asset.eClass.name, "Heater")
+
+
