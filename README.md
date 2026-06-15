@@ -123,6 +123,11 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 ## Changes
 
+## Version 26.6
+
+- Add support for ESDL release 26.6
+- Implement automatic ESDL version migration mappings on loading ESDL files with older ESDL formats
+
 ## Version 26.5
 
 - Add support for ESDL release 26.5

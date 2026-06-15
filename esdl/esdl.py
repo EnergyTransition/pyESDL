@@ -3867,6 +3867,34 @@ class PipeDiameterConstraint(Constraint):
             self.maximum = maximum
 
 
+class MeasureGroup(AbstractMeasure):
+    """A grouping of measures. Can be used to represent a catalogue of certain assets"""
+    measureGroup = EReference(ordered=True, unique=True, containment=True, derived=False, upper=-1)
+    measure = EReference(ordered=True, unique=True, containment=True, derived=False, upper=-1)
+
+    def __init__(self, *, measureGroup=None, measure=None, **kwargs):
+
+        super().__init__(**kwargs)
+
+        if measureGroup:
+            self.measureGroup.extend(measureGroup)
+
+        if measure:
+            self.measure.extend(measure)
+
+
+class MeasureGroupReference(AbstractMeasure):
+    """A reference to a MeasureGroup. Can be used to refer to a specific MeasureGroup from an asset. For example an optional Pipe with a reference to the pipe catalogue from which the pipe can be chosen."""
+    reference = EReference(ordered=True, unique=True, containment=False, derived=False)
+
+    def __init__(self, *, reference=None, **kwargs):
+
+        super().__init__(**kwargs)
+
+        if reference is not None:
+            self.reference = reference
+
+
 @abstract
 class EnergyAsset(ConnectableAsset):
     """An abstract class that describes a connectable Asset using ports. EnergyAssets main subclasses contain the 5 capability type: Producer, Consumer, Storage, Conversion and Transport """
