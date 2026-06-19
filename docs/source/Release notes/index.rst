@@ -1,8 +1,18 @@
 Release notes
 =============
 
-Version 26.5
+Version 26.6.1
 --------------
+- Fix missing files for automatic ESDL version migration
+
+Version 26.6
+------------
+- Add support for ESDL release 26.6
+- Implement automatic ESDL version migration mappings on loading ESDL files with older ESDL formats
+
+Version 26.5
+------------
+- Add support for ESDL release 26.5
 - Add general profile parsing and adding/writing to database functions, including profile data caching
 - Add automated testing with postgres/influxdb databases
 
