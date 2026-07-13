@@ -1,6 +1,10 @@
 Release notes
 =============
 
+Version 26.7
+------------
+- Fix bug in writing postgres profile data
+
 Version 26.6.1
 --------------
 - Fix missing files for automatic ESDL version migration
