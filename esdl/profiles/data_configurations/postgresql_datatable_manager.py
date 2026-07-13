@@ -90,31 +90,37 @@ class PostgresqlDataTableManager:
         self,
         datatable_profile: esdl.DataTableProfile,
     ):
+
+        self.connection = None
+        configuration = datatable_profile.configuration
+
+        connect_kwargs = {
+            "host": configuration.host,
+            "port": configuration.port or 5432,
+            "dbname": configuration.database,
+        }
+        credential = Credentials.get_credential(datatable_profile.configuration)
+        if credential and credential.username and credential.password:
+            connect_kwargs["user"] = credential.username
+            connect_kwargs["password"] = credential.password
+
+        if DEBUG_SQL:
+            username = credential.username if credential else "non_auth"
+            print(
+                f"Connecting to Postgres database at {username}@{configuration.host}:"
+                f"{configuration.port or 5432}/{configuration.database}",
+            )
+
         try:
-            configuration = datatable_profile.configuration
-
-            connect_kwargs = {
-                "host": configuration.host,
-                "port": configuration.port or 5432,
-                "dbname": configuration.database,
-            }
-            credential = Credentials.get_credential(datatable_profile.configuration)
-            if credential and credential.username and credential.password:
-                connect_kwargs["user"] = credential.username
-                connect_kwargs["password"] = credential.password
-
-            if DEBUG_SQL:
-                username = credential.username if credential else "non_auth"
-                print(
-                    f"Connecting to Postgres database at {username}@{configuration.host}:"
-                    f"{configuration.port or 5432}/{configuration.database}",
-                )
-
             self.connection = psycopg.connect(**connect_kwargs)
-        except psycopg.errors.InvalidCatalogName:
-            logging.info(f"Could not connect to PostgreSQL: Database '{connect_kwargs['dbname']}' does not exist yet.")
         except psycopg.Error as e:
-            logging.error("Error while connecting to PostgreSQL: %s", e)
+            # Some setups/proxies may report missing DB via a generic psycopg.Error.
+            error_text = str(e).lower()
+            dbname = str(connect_kwargs["dbname"])
+            if "database" in error_text and "does not exist" in error_text and dbname.lower() in error_text:
+                logging.info(f"Could not connect to PostgreSQL: Database '{dbname}' does not exist yet.")
+            else:
+                logging.error("Error while connecting to PostgreSQL: %s", e)
             if self.connection and not self.connection.closed:
                 self.connection.close()
                 raise e
