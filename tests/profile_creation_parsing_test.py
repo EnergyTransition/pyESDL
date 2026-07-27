@@ -49,6 +49,7 @@ def profile_fixture():
     postgres_port = int(os.getenv("PYESDL_POSTGRES_PORT", "1432"))
     postgres_user = os.getenv("PYESDL_POSTGRES_USER", "postgres")
     postgres_password = os.getenv("PYESDL_POSTGRES_PASSWORD", "password")
+    postgres_profile_db = os.getenv("PYESDL_POSTGRES_PROFILE_DB", "timeseries_profile")
 
     influxdb_host = os.getenv("PYESDL_INFLUXDB_HOST", "localhost")
     influxdb_port = int(os.getenv("PYESDL_INFLUXDB_PORT", "1086"))
@@ -108,7 +109,8 @@ def profile_fixture():
 
     dtp_postgres1 = create_data_table_profile(
         es=es,
-        database_name=model_run_id,
+        database_name=postgres_profile_db,
+        schema=model_run_id,
         table_name=carrier_network_id,
         column_name="column1",
         start_date=datetime(2019, 1, 1),
@@ -125,7 +127,8 @@ def profile_fixture():
 
     dtp_postgres2 = create_data_table_profile(
         es=es,
-        database_name=model_run_id,
+        database_name=postgres_profile_db,
+        schema=model_run_id,
         table_name=carrier_network_id,
         column_name="column2",
         start_date=datetime(2019, 1, 1),

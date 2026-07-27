@@ -1,6 +1,11 @@
 Release notes
 =============
 
+Version 26.7.1
+------------
+
+- Fix bug in the profile util function
+
 Version 26.7
 ------------
 - Fix bug in writing postgres profile data
