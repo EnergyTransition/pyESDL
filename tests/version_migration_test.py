@@ -24,7 +24,14 @@ class TestVersionMigration(unittest.TestCase):
         esh.load_file("tests/test_esdl_with_deprecated_attribute.esdl")
 
         es = esh.get_energy_system()
-        print(es)
+
+        print("-------------------------")
+        print("ESDL parsing information:")
+        resource = es.eResource
+        pi_list = resource.get_parse_information()
+        for pi in pi_list:
+            print("- ", pi)
+        print("-------------------------")
 
         area = es.instance[0].area
         asset = area.asset[0]
@@ -41,4 +48,8 @@ class TestVersionMigration(unittest.TestCase):
             print(asset.eClass.name)
             self.assertEqual(asset.eClass.name, "Heater")
 
+        asset = area.asset[2]
+        if isinstance(asset, esdl.HeatPump):
+            attr = getattr(asset, "additionalHeatingSourceType", None)
+            self.assertEqual(attr, None)
 

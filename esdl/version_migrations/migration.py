@@ -1,7 +1,8 @@
 import json
 
 from esdl.version_migrations.version_migration_mappings import version_migration_mapping_rename_attribute, \
-    version_migration_mapping_rename_class, version_migration_remove_and_replace_enum_value
+    version_migration_mapping_rename_class, version_migration_remove_and_replace_enum_value, \
+    version_migration_remove_attribute
 
 
 class VersionMigration:
@@ -9,11 +10,18 @@ class VersionMigration:
         self.version_migration_mapping_rename_attribute = version_migration_mapping_rename_attribute
         self.version_migration_mapping_rename_class = version_migration_mapping_rename_class
         self.version_migration_remove_and_replace_enum_value = version_migration_remove_and_replace_enum_value
+        self.version_migration_remove_attribute = version_migration_remove_attribute
 
     def check_attribute_migration_mappings(self, class_name, attribute_name):
         for mapping in self.version_migration_mapping_rename_attribute:
             if class_name == mapping.class_name and attribute_name == mapping.attribute_name:
                 return mapping.attribute_new_name
+
+    def check_remove_attribute(self, class_name, attribute_name):
+        for mapping in self.version_migration_remove_attribute:
+            if class_name == mapping.class_name and attribute_name == mapping.attribute_name:
+                return True
+        return False
 
     def check_class_migration_mappings(self, class_name):
         for mapping in self.version_migration_mapping_rename_class:

@@ -208,9 +208,16 @@ class XMLResource(XMIResource):
                         logger.warning(s)
                         self.parse_information.append(s)
                 else:
-                    s = 'Attribute \'{0}\' does not exists for type {1} and is ignored ({2} line {3}).'\
-                        .format(att_name, owner.eClass.name, node.tag, node.sourceline)
-                    logger.warning(s)
-                    self.parse_information.append(s)
+                    removed_attribute = self.version_migration.check_remove_attribute(owner.eClass.name, att_name)
+                    if removed_attribute:
+                        s = 'Attribute \'{0}\' was removed for type {1} ({2} line {3}).'\
+                            .format(att_name, owner.eClass.name, node.tag, node.sourceline)
+                        logger.warning(s)
+                        self.parse_information.append(s)
+                    else:
+                        s = 'Attribute \'{0}\' does not exists for type {1} and is ignored ({2} line {3}).'\
+                            .format(att_name, owner.eClass.name, node.tag, node.sourceline)
+                        logger.warning(s)
+                        self.parse_information.append(s)
 
             return feature

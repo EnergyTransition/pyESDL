@@ -11,6 +11,7 @@
         </port>
       </asset>
       <asset xsi:type="esdl:BiomassHeater" id="70d29bc1-812c-4c71-a1b8-16d4631b3820" name="Should_now_become_heater" />
+      <asset xsi:type="esdl:HeatPump" additionalHeatingSourceType="GAS" />
     </area>
   </instance>
 </esdl:EnergySystem>

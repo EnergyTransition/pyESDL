@@ -17,6 +17,7 @@ import json
 from shapely import wkt, wkb, to_geojson
 from shapely.geometry import Point, LineString, Polygon, MultiPolygon, GeometryCollection, shape
 from shapely.ops import transform
+from shapely.validation import explain_validity
 import esdl
 import pyproj
 
@@ -66,11 +67,13 @@ class Shape:
         if isinstance(shape_input, MultiPolygon):
             return ShapeMultiPolygon(shape_input)
 
-        if isinstance(shape_input, list) and all(isinstance(elem, list) and "lat" in elem[0] for elem in shape_input):
-            return ShapePolygon(shape_input)
-        else:
-            # TODO: Better check for coordinates structure
+        if isinstance(shape_input, list) and all(
+                isinstance(elem, list) and all(isinstance(sub_elem, list) and "lat" in sub_elem[0] for sub_elem in elem)
+                for elem in shape_input):
             return ShapeMultiPolygon(shape_input)
+        else:
+            if isinstance(shape_input, list) and all(isinstance(elem, list) and "lat" in elem[0] for elem in shape_input):
+                return ShapePolygon(shape_input)
 
     @staticmethod
     def parse_esdl(esdl_geometry):
@@ -195,6 +198,19 @@ class Shape:
         :return: a WKT string representing the loaded geometry information
         """
         return self.shape.wkt
+
+    def is_valid(self):
+        """
+        Returns whether the loaded shape is a valid geometry (per the OGC Simple Features rules), e.g. no
+        self-intersections and holes properly contained within the exterior.
+        """
+        return self.shape.is_valid
+
+    def explain_validity(self):
+        """
+        Returns a human-readable reason why the loaded shape is invalid, or "Valid Geometry" if it is valid.
+        """
+        return explain_validity(self.shape)
 
     def get_geojson_feature(self, properties={}):
         """
@@ -454,6 +470,17 @@ class ShapePolygon(Shape):
             pol.interior.append(interior)
         return pol
 
+    def get_leaflet_rings(self):
+        """
+        Returns this polygon's rings as [lat, lon] point lists (unclosed, i.e. without a last point
+        repeating the first), the coordinate format used by Leaflet.
+        Ring 0 is the exterior, the rest (if any) are interior holes.
+        """
+        rings = [list(self.shape.exterior.coords)[:-1]]
+        for interior in self.shape.interiors:
+            rings.append(list(interior.coords)[:-1])
+        return [[[lat, lon] for lon, lat in ring] for ring in rings]
+
 
 class ShapeMultiPolygon(Shape):
     """
@@ -467,12 +494,14 @@ class ShapeMultiPolygon(Shape):
         Constructor of the ShapeMultiPolygon class. Can be called with an esdl.MultiPolygon, a list of lists of lists
         of dictionaries with "lat" and "lng" key, or a Shapely Polygon instance
 
-        :param shape_input: the input shape, can be an esdl.Polygon, a list of lists of dictionaries
-                            with "lat" and "lng" key, or a Shapely Polygon instance
+        :param shape_input: the input shape, can be an esdl.MultiPolygon, a list of lists of lists of dictionaries
+                            with "lat" and "lng" key, or a Shapely MultyPolygon instance
         """
         if isinstance(shape_input, esdl.MultiPolygon):
             self.shape = self.parse_esdl(shape_input)
-        elif isinstance(shape_input, list) and all(isinstance(elem, list) for elem in shape_input):
+        elif (isinstance(shape_input, list) and
+              all(isinstance(elem, list) and
+                  (all(isinstance(sub_elem, list) for sub_elem in elem)) for elem in shape_input)):
             self.shape = self.parse_leaflet(shape_input)
         elif isinstance(shape_input, MultiPolygon):
             self.shape = shape_input
@@ -507,7 +536,7 @@ class ShapeMultiPolygon(Shape):
         :param esdl_geometry: a list of lists of lists of dictionaries with "lat" and "lng" keys
         :return: a Shapely MultiPolygon (using WGS84 as CRS)
         """
-        if isinstance(leaflet_coords, list) and all(isinstance(elem, list) for elem in leaflet_coords):
+        if isinstance(leaflet_coords, list) and all(isinstance(elem, list) and (all(isinstance(sub_elem, list) for sub_elem in elem)) for elem in leaflet_coords):
             plist = list()
             for p in leaflet_coords:
                 plist.append(ShapePolygon.parse_leaflet(p))
@@ -518,24 +547,27 @@ class ShapeMultiPolygon(Shape):
 
     def get_esdl(self):
         """
-        This get_esdl function is not yet implemented for the ShapeMultiPolygon class, as MultiPolygon
-        is not a frequent ESDL geometry
+        Function that generates an esdl.MultiPolygon instance based on the loaded shape.
+
+        :return: an esdl.MultiPolygon instance based on the loaded shape
         """
-        raise Exception("Not implemented yet, MultiPolygon is not a frequent ESDL geometry")
+        mp = esdl.MultiPolygon()
+        for p in self.shape.geoms:
+            mp.polygon.append(ShapePolygon(p).get_esdl())
+        return mp
+
+    def get_leaflet_coords(self):
+        """
+        Returns a list of sub-polygons, each a list of rings ([lat, lon] point lists; ring 0 is the
+        exterior, the rest are holes), the coordinate format used by Leaflet.
+        """
+        return [ShapePolygon(p).get_leaflet_rings() for p in self.shape.geoms]
 
     def get_polygon_list_esdl(self):
         """
-        Function that generates a list of esdl.Polygons, based on the loaded MultiPolygon shape.
-
-        :return: list of esdl.Polygons
+        Returns a list of esdl.Polygon, one per sub-polygon of the loaded MultiPolygon shape.
         """
-        pol_list = list()
-
-        for mp_element in self.shape.geoms:
-            polygon = ShapePolygon(mp_element)
-            pol_list.append(polygon.get_esdl())
-
-        return pol_list
+        return [ShapePolygon(p).get_esdl() for p in self.shape.geoms]
 
 
 class ShapeGeometryCollection(Shape):

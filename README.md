@@ -123,6 +123,11 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 ## Changes
 
+## Version 26.9
+
+- Add support for ESDL release 26.9
+- Implement support for MultiPolygons
+
 ## Version 26.7.1
 
 - Fix bug in the profile util function
