@@ -11,7 +11,10 @@
 #      TNO         - Initial implementation
 #  Manager:
 #      TNO
-from pyecore.ecore import EClass, EDataType, EStringToStringMapEntry, EAnnotation, EProxy, EEnum
+from functools import lru_cache
+from typing import Optional
+
+from pyecore.ecore import EClass, EDataType, EStringToStringMapEntry, EAnnotation, EProxy, EEnum, EStructuralFeature
 
 from esdl.resources.xmi import XMIResource, XMIOptions, XMI_URL, XSI_URL, XSI
 from lxml.etree import QName, Element, ElementTree
@@ -41,6 +44,14 @@ class XMLResource(XMIResource):
 
     def load(self, options=None):
         super().load(options)
+
+    @lru_cache()
+    def _find_feature(self, eclass: EClass, name: str) -> Optional[EStructuralFeature]:
+        """Resolve legacy range attributes written as 'from_'."""
+        feature = eclass.findEStructuralFeature(name)
+        if feature is None and name == "from_" and eclass.name in ("FromToIntItem", "FromToDoubleItem"):
+            return eclass.findEStructuralFeature("from")
+        return feature
 
     def save(self, output=None, options=None):
         self.options = options or {}
