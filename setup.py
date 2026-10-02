@@ -40,7 +40,7 @@ setuptools.setup(
     author_email='ewoud.werkman@tno.nl',
     python_requires='>=3.7',
     install_requires=[
-        'pyecore==0.13.2'
+        'pyecore==0.15.1'
     ],
     extras_require=extras_require,
     # test_suite='setup.my_test_suite',
