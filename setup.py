@@ -8,8 +8,8 @@ import setuptools
 
 version = tuple(sys.version_info[:2])
 
-if version < (3, 7):
-    sys.exit('pyESDL requires at least Python >= 3.7')
+if version < (3, 10):
+    sys.exit('pyESDL requires at least Python >= 3.10')
 
 
 # def my_test_suite():
@@ -29,7 +29,7 @@ setuptools.setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     url="https://energytransition.gitbook.io/esdl/",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(exclude=('tests', 'tests.*')),
     package_data={'': ['README.md', 'LICENSE.md']},
     include_package_data=True,
     license='Apache 2.0',
@@ -38,7 +38,7 @@ setuptools.setup(
     description="Python implementation of the Energy System Description Language (ESDL) for modelling energy systems",
     author='Ewoud Werkman',
     author_email='ewoud.werkman@tno.nl',
-    python_requires='>=3.7',
+    python_requires='>=3.10',
     install_requires=[
         'pyecore==0.15.1'
     ],
