@@ -1,6 +1,10 @@
 Release notes
 =============
 
+Version 26.10
+-------------
+- Updated EnergyDataDescription (EDD) schema
+
 Version 26.9
 ------------
 - Add support for ESDL release 26.9
