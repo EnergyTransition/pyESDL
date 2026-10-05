@@ -77,7 +77,7 @@ class TestUndo(unittest.TestCase):
         self.assertIs(stack.size(), 1)
         self.assertIs(stack.can_undo(), False)
         self.assertIs(stack.can_redo(), True)
-        self.assertEquals(es.instance[0].area.asset, [])
+        self.assertEqual(es.instance[0].area.asset, [])
 
         # After redoing, the asset should be back in the energy system.
         stack.redo()
@@ -86,7 +86,7 @@ class TestUndo(unittest.TestCase):
         self.assertIs(stack.can_redo(), False)
         asset = es.instance[0].area.asset[0]
         # We cannot compare the objects directly with in, because actually a copy of the object is stored and applied.
-        self.assertEquals(asset.id, transformer.id)
+        self.assertEqual(asset.id, transformer.id)
 
 
 if __name__ == '__main__':

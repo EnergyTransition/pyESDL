@@ -8,6 +8,8 @@ import json
 from pyecore.resources.resource import Resource
 from pyecore.ecore import EObject, EProxy, ECollection, EClass, EEnumLiteral, EStringToStringMapEntry
 
+from esdl.resources.resource_type import ProjectManagerResourceType
+
 
 @unique
 class JsonOptions(Enum):
@@ -21,7 +23,9 @@ NO_OBJECT = object()
 
 
 class JsonResource(Resource):
-    def __init__(self, uri=None, use_uuid=False, indent=None, ref_tag='$ref'):
+    type: ProjectManagerResourceType = ProjectManagerResourceType.UNKNOWN
+
+    def __init__(self, uri=None, use_uuid=False, indent=None, ref_tag='$ref', type=ProjectManagerResourceType.UNKNOWN):
         super().__init__(uri, use_uuid)
         self._resolve_later = []
         self._load_href = {}
@@ -29,6 +33,7 @@ class JsonResource(Resource):
         self.ref_tag = ref_tag
         self.mappers = {}
         self.default_mapper = DefaultObjectMapper()
+        self.type = type
 
     def load(self, options=None):
         self.options = options or {}
