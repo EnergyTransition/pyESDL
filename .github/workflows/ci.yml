@@ -55,6 +55,8 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Configure Git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Install Python dependencies
         run: |
           python3 -m pip install --user --upgrade setuptools wheel twine versioneer future-fstrings
@@ -103,6 +105,8 @@ jobs:
   #       with:
   #         fetch-depth: 0
   #         persist-credentials: false
+  #     - name: Configure Git
+  #       run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
   #     - name: Install Python dependencies
   #       run: |
   #         python3 -m pip install --user --upgrade pip setuptools wheel 'twine>=6.1.0' versioneer future-fstrings
