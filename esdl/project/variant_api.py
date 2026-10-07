@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from typing import List, Optional, Union
 from uuid import uuid4
 
-from esdlproject import VariantCollection, Variant
+from esdl.project import VariantCollection, Variant
 
 logger = logging.getLogger(__name__)
 

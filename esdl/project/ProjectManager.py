@@ -15,11 +15,11 @@ from esdl.resources.json import JsonResource
 from esdl.resources.project_resource import ProjectResource
 from esdl.resources.xmlresource import XMLResource, ProjectManagerResourceType
 from esdl.undo import ChangeTracker, Tracker, UndoRedoCommandStack, ChangeContext
-from esdlproject import ESDLProject, HighLevelChange, Variant, VariantCollection, AbstractChange
-from esdlproject.IgnoredChanges import ignored_change
-from esdlproject.MergeConflictHandler import MergeConflictHandler
-from esdlproject.change_handler import applyChange
-from esdlproject.variant_api import get_parent_variant, get_variant_path_list
+from esdl.project import ESDLProject, HighLevelChange, Variant, VariantCollection, AbstractChange
+from esdl.project.IgnoredChanges import ignored_change
+from esdl.project.MergeConflictHandler import MergeConflictHandler
+from esdl.project.change_handler import applyChange
+from esdl.project.variant_api import get_parent_variant, get_variant_path_list
 
 logger = logging.getLogger(__name__)
 

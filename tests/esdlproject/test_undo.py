@@ -2,7 +2,7 @@ import unittest
 import uuid
 
 from esdl import EnergySystem, Transformer
-from esdlproject.ProjectManager import ProjectManager
+from esdl.project.ProjectManager import ProjectManager
 
 
 class TestUndo(unittest.TestCase):

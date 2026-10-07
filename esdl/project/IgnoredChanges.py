@@ -11,7 +11,7 @@
 #      TNO         - Initial implementation
 #  Manager:
 #      TNO
-from esdlproject import DetailedChange
+from esdl.project import DetailedChange
 
 '''
 Defines which attributes/references are ignored from parent variants for which classes

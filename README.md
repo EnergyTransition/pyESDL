@@ -112,8 +112,8 @@ Add a pipe as a tracked change, create a child variant that inherits it, then sa
 
 ```python
 from esdl import esdl
-from esdlproject.ProjectManager import ProjectManager
-from esdlproject.variant_api import create_new_variant
+from esdl.project.ProjectManager import ProjectManager
+from esdl.project.variant_api import create_new_variant
 
 # Create a project with an empty energy system
 pm = ProjectManager()

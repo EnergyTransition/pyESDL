@@ -4,7 +4,7 @@ from typing import List, Tuple
 from pyecore.ecore import EObject, EClass, EReference
 from pyecore.valuecontainer import ECollection
 
-from esdlproject import AbstractChange, Add, Set, DetailedChange, Remove
+from esdl.project import AbstractChange, Add, Set, DetailedChange, Remove
 
 logger = logging.getLogger(__name__)
 
