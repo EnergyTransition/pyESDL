@@ -493,10 +493,15 @@ class PostgresqlDataTableManager:
                 raise e
 
             insert_columns = [
-                f'"{c}" {"JSONB" if c == FILTER_DICT_COLUMN_NAME else "DOUBLE PRECISION"}' for c in non_datetime_columns
+                sql.SQL("{} {}").format(
+                    sql.Identifier(c), sql.SQL("JSONB" if c == FILTER_DICT_COLUMN_NAME else "DOUBLE PRECISION")
+                )
+                for c in non_datetime_columns
             ]
-            insert_columns.insert(0, f'"{self.datatable_profile.datetimeColumnName}" TIMESTAMP')
-            insert_column_statement = ",\n".join(insert_columns)
+            insert_columns.insert(
+                0, sql.SQL("{} TIMESTAMP").format(sql.Identifier(self.datatable_profile.datetimeColumnName))
+            )
+            insert_column_statement = sql.SQL(",\n").join(insert_columns)
 
             # create schema and table if not exists
             if self.datatable_profile.schema:
@@ -507,8 +512,9 @@ class PostgresqlDataTableManager:
                     print(query.as_string(cursor))
                 cursor.execute(query)
 
-            sql_string = "CREATE TABLE IF NOT EXISTS {table}" + f" ({insert_column_statement})"
-            query = sql.SQL(sql_string).format(table=table)
+            query = sql.SQL("CREATE TABLE IF NOT EXISTS {table} ({columns})").format(
+                table=table, columns=insert_column_statement
+            )
             if DEBUG_SQL:
                 print(query.as_string(cursor))
             cursor.execute(query)

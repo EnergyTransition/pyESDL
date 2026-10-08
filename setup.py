@@ -30,7 +30,7 @@ setuptools.setup(
     cmdclass=versioneer.get_cmdclass(),
     url="https://energytransition.gitbook.io/esdl/",
     packages=setuptools.find_packages(exclude=('tests', 'tests.*')),
-    package_data={'': ['README.md', 'LICENSE.md']},
+    package_data={'': ['README.md', 'LICENSE.md'], 'esdl': ['esdl.ecore']},
     include_package_data=True,
     license='Apache 2.0',
     long_description_content_type="text/markdown",

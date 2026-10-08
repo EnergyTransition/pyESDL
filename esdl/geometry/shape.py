@@ -212,13 +212,16 @@ class Shape:
         """
         return explain_validity(self.shape)
 
-    def get_geojson_feature(self, properties={}):
+    def get_geojson_feature(self, properties: dict | None = None) -> dict:
         """
         Function that generates a GeoJSON feature from the loaded geometry, with the properties given as an input
 
         :param properties: the properties that must be added to the GeoJSON FFeature
         :return: a GeoJSON Feature representing the loaded geometry information, with the given properties
         """
+        if properties is None:
+            properties = {}
+
         geojson_geometry_str = to_geojson(self.shape)
         geojson_geometry = json.loads(geojson_geometry_str)
         geojson_feature = {
