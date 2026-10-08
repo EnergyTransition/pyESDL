@@ -100,33 +100,34 @@ jobs:
           echo "$CI_COMMIT_TAG"
           python3 -m pytest tests
 
-  # deploy:
-  #   needs: test
-  #   if: startsWith(github.ref, 'refs/tags/')
-  #   environment: pypi
-  #   permissions:
-  #     contents: read
-  #     id-token: write
-  #   runs-on: ubuntu-latest
-  #   container: python:3.10-slim@sha256:6ff506466f8b1e981719b468cc0023b8ef000b983cdec0eafe119d01f379e31d
-  #   steps:
-  #     - name: Install system dependencies
-  #       run: apt-get update && apt-get install -y curl git
-  #     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-  #       with:
-  #         fetch-depth: 0
-  #         persist-credentials: false
-  #     - name: Configure Git
-  #       run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-  #     - name: Install Python dependencies
-  #       run: |
-  #         python3 -m pip install --user --upgrade pip setuptools wheel 'twine>=6.1.0' versioneer future-fstrings
-  #         python3 -m pip install --user -r requirements.txt
-  #     - name: Test and build package
-  #       run: |
-  #         git describe
-  #         echo "$CI_COMMIT_TAG"
-  #         python3 -m pytest tests
-  #         python3 -m build
-  #     - name: Publish to PyPI
-  #       run: python3 -m twine upload --verbose --non-interactive dist/*
+  deploy:
+    name: Publish to PyPI
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/')
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write # Required for PyPI Trusted Publishing.
+    runs-on: ubuntu-latest
+    container: python:3.10-slim@sha256:6ff506466f8b1e981719b468cc0023b8ef000b983cdec0eafe119d01f379e31d
+    steps:
+      - name: Install system dependencies
+        run: apt-get update && apt-get install -y curl git
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Configure Git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --user --upgrade pip setuptools wheel 'twine>=6.1.0' versioneer future-fstrings
+          python3 -m pip install --user -r requirements.txt
+      - name: Test and build package
+        run: |
+          git describe
+          echo "$CI_COMMIT_TAG"
+          python3 -m pytest tests
+          python3 -m build
+      - name: Publish to PyPI
+        run: python3 -m twine upload --verbose --non-interactive dist/*
