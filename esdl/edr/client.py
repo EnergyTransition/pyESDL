@@ -34,7 +34,7 @@ class EDRInfo:
     """ the title of the object in the EDR """
     description: str
     """ the description of the object in the EDR """
-    esdl_type: str
+    esdl_type: str | None
     """ the ESDL type of the object in the EDR """
 
 
