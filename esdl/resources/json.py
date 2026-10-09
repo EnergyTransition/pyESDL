@@ -14,6 +14,7 @@ class JsonOptions(Enum):
     SERIALIZE_DEFAULT_VALUES = 0
     ENCODER = 1
     DECODER = 2
+    INDENT = 3
 
 
 NO_OBJECT = object()
@@ -51,6 +52,7 @@ class JsonResource(Resource):
 
     def save(self, output=None, options=None):
         self.options = options or {}
+        indent = self.options.get(JsonOptions.INDENT, self.indent)
         stream = self.open_out_stream(output)
         dict_list = []
         for root in self.contents:
@@ -59,7 +61,7 @@ class JsonResource(Resource):
             dict_list = dict_list[0]
 
         encoder = self.options.get(JsonOptions.ENCODER)
-        stream.write(json.dumps(dict_list, indent=self.indent, cls=encoder)
+        stream.write(json.dumps(dict_list, indent=indent, cls=encoder)
                      .encode('utf-8'))
 
         stream.flush()

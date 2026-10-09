@@ -106,6 +106,38 @@ xml_string = esh.to_string()
 print(xml_string)
 ```
 
+### Example 3 - Creating a project with inherited variants
+
+Add a pipe as a tracked change, create a child variant that inherits it, then save and reload the project.
+
+```python
+from esdl import esdl
+from esdlproject.ProjectManager import ProjectManager
+from esdlproject.variant_api import create_new_variant
+
+# Create a project with an empty energy system
+pm = ProjectManager()
+stack = pm.get_undo_redo_stack()
+# Add a pipe as a tracked change
+with stack.track_changes("Add pipe"):
+    pipe = esdl.Pipe(id="pipe", name="Pipe")
+    pm.get_active_energy_system().instance[0].area.asset.append(pipe)
+
+change = pm.get_active_variant().change[0]
+print(change.label)  # Add pipe
+
+# Create and activate a child variant that inherits the pipe
+child = create_new_variant(pm.active_variant, "Child variant")
+pm.set_active_variant(child)
+print(pm.get_active_energy_system().instance[0].area.asset[0].name)  # Pipe
+
+# Save and reload the project, then activate the child variant
+loaded_pm = ProjectManager()
+loaded_pm.load_from_string(pm.save())
+loaded_pm.set_active_variant(loaded_pm.get_variant_by_id(child.id))
+print(loaded_pm.get_active_variant().name)  # Child variant
+```
+
 ### Converting ESDL units
 
 Example:

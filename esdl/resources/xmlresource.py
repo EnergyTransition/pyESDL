@@ -14,13 +14,14 @@
 from functools import lru_cache
 from typing import Optional
 
-from pyecore.ecore import EClass, EDataType, EStringToStringMapEntry, EAnnotation, EProxy, EEnum, EStructuralFeature
+from pyecore.ecore import EClass, EDataType, EStringToStringMapEntry, EAnnotation, EProxy, EEnum, EStructuralFeature, EObject
 
-from esdl.resources.xmi import XMIResource, XMIOptions, XMI_URL, XSI_URL, XSI
-from lxml.etree import QName, Element, ElementTree
+from pyecore.resources.xmi import XMIResource, XMIOptions, XMI_URL, XSI_URL, XSI, XMI
+from lxml.etree import QName, Element, ElementTree, _Comment
 import logging
 
 from esdl.version_migrations.migration import VersionMigration
+from esdl.resources.resource_type import ProjectManagerResourceType
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,8 @@ It basically removes the xmi:version stuff from the serialization.
 It also adds parse_information that can be inspected for errors when reading an ESDL file.
 """
 class XMLResource(XMIResource):
+    type: ProjectManagerResourceType = ProjectManagerResourceType.UNKNOWN
+
     def __init__(self, uri=None, use_uuid=False):
         super().__init__(uri, use_uuid)
         self._later = []
@@ -39,11 +42,82 @@ class XMLResource(XMIResource):
 
         self.version_migration = VersionMigration()
 
+    def set_content(self, root: EObject) -> None:
+        """
+        Replace the resource root, detaching it from its previous container.
+        """
+        if not isinstance(root, EObject):
+            raise ValueError(f"The resource requires an EObject type, but received {type(root)} instead.")
+
+        if len(self.contents) > 0 and self.contents[0]:
+            self.remove(self.contents[0])
+        self.contents.insert(0, root)
+        root._eresource = self
+        if root._container is not None:
+            container = root._container
+            feature = root._containment_feature
+            if feature.many:
+                container.eGet(feature).remove(root)
+            else:
+                container.eSet(feature, None)
+            root._container = None  # A resource root has no container.
+
+    def set_content_without_detaching(self, root: EObject) -> None:
+        """
+        Serialize an object without moving it out of its original resource or container.
+        """
+        if not isinstance(root, EObject):
+            raise ValueError(f"The resource requires an EObject type, but received {type(root)} instead.")
+
+        self.contents.clear()
+        self.contents.insert(0, root)
+
     def get_parse_information(self):
         return self.parse_information
 
     def load(self, options=None):
         super().load(options)
+
+    def _decode_eobject(self, current_node, parent_eobj) -> None:
+        """Ignore XML comments while decoding contained objects."""
+        if isinstance(current_node, _Comment):
+            return
+        super()._decode_eobject(current_node, parent_eobj)
+
+    def load_subtree(self, original_root, sub_tree, options=None):
+        """
+        Load an embedded energy system into a separate variant-collection resource.
+        """
+        self.type = ProjectManagerResourceType.VARIANT_COLLECTION
+        self.options = options or {}
+        self.cache_enabled = True
+        self.prefixes.update(original_root.nsmap)
+        self.reverse_nsmap = {v: k for k, v in self.prefixes.items()}
+
+        self.xsitype = f"{{{self.prefixes.get(XSI)}}}type"
+        self.xmiid = f"{{{self.prefixes.get(XMI)}}}id"
+        self.schema_tag = f"{{{self.prefixes.get(XSI)}}}schemaLocation"
+
+        def grouper(iterable):
+            args = [iter(iterable)] * 2
+            return zip(*args)
+
+        self.schema_locations = {}
+        schema_tag_list = original_root.attrib.get(self.schema_tag, "")
+        for prefix, path in grouper(schema_tag_list.split()):
+            if "#" not in path:
+                path = path + "#"
+            self.schema_locations[prefix] = EProxy(path, self)
+
+        modelroot = self._init_modelroot(sub_tree)
+        for child in sub_tree:
+            self._decode_eobject(child, modelroot)
+
+        if self.contents:
+            self._decode_ereferences()
+
+        self._clean_registers()
+        self.uri.close_stream()
 
     @lru_cache()
     def _find_feature(self, eclass: EClass, name: str) -> Optional[EStructuralFeature]:
