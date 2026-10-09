@@ -651,7 +651,8 @@ class PostgresqlDataTableManager:
                     ),
                 )
             except Exception as e:
-                logging.error("Error", e)
+                logging.error("Error saving profile metadata: %s", e)
+                raise
 
 
 class InvalidCredentials(Exception):

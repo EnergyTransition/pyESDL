@@ -111,7 +111,7 @@ class DataTableProfileManager(ProfileManager):
                     )
                 )
                 if len(self.profile_data_list) > 0:
-                    self.num_profile_items = len(self.profile_data_list[0])
+                    self.num_profile_items = len(self.profile_data_list)
                     if self.num_profile_items > 0:
                         dt_index = self.get_profile_name_index(self.data_table_profile.datetimeColumnName)
                         self.start_datetime = self.profile_data_list[0][dt_index]
