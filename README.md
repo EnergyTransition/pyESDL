@@ -123,6 +123,11 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 ## Changes
 
+## Version 26.10.1
+
+- Improved datetime parsing
+- Improved copy functionality and range attribute fixes
+
 ## Version 26.10
 
 - Updated EnergyDataDescription (EDD) schema
