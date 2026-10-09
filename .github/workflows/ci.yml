@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '**'
+
+permissions:
+  contents: read
+
+env:
+  CI_COMMIT_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+
+jobs:
+  test:
+    name: test (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: '3.10'
+            image: python:3.10-slim@sha256:6ff506466f8b1e981719b468cc0023b8ef000b983cdec0eafe119d01f379e31d
+          - python-version: '3.11'
+            image: python:3.11-slim@sha256:0dd364ba7e10242f07755449e3a3d0e35f9efd987952737b90def6709ab0c5ce
+          - python-version: '3.12'
+            image: python:3.12-slim@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f
+          - python-version: '3.13'
+            image: python:3.13-slim@sha256:bf44cdfcb76cd3b41e879bc058fc37ec5872002ccfde7fcb765e218cde0cd79c
+          - python-version: '3.14'
+            image: python:3.14-slim@sha256:f85c5697265c178cc6887276c55fe16cf3d14ca35c3df6a5eab3b360534a55d2
+    container: ${{ matrix.image }}
+    services:
+      postgres:
+        image: postgis/postgis:17-master@sha256:d47fe8c1bf27fa2a498899e7a2bc572af002a7f882b91c07795f0509f96ef027
+        env:
+          POSTGRES_DB: energy_profiles
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+      influxdb:
+        image: influxdb:1.7@sha256:a25a134e87489cb3e642c712576cf8471667b0cad1cfd65727d453fb40e759d8
+        env:
+          INFLUXDB_ADMIN_USER: admin
+          INFLUXDB_ADMIN_PASSWORD: admin
+    env:
+      POSTGRES_DB: energy_profiles
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      INFLUXDB_ADMIN_USER: admin
+      INFLUXDB_ADMIN_PASSWORD: admin
+      PYESDL_POSTGRES_HOST: postgres
+      PYESDL_POSTGRES_PORT: '5432'
+      PYESDL_POSTGRES_USER: postgres
+      PYESDL_POSTGRES_PASSWORD: password
+      PYESDL_POSTGRES_PROFILE_DB: timeseries_profile
+      PYESDL_INFLUXDB_HOST: influxdb
+      PYESDL_INFLUXDB_PORT: '8086'
+      PYESDL_INFLUXDB_USER: admin
+      PYESDL_INFLUXDB_PASSWORD: admin
+    steps:
+      - name: Install system dependencies
+        run: apt-get update && apt-get install -y curl git
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Configure Git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --user --upgrade setuptools wheel twine versioneer future-fstrings
+          python3 -m pip install --user -r requirements.txt
+      - name: Wait for database services
+        run: |
+          python3 - <<'PY'
+          import socket
+          import time
+
+          def wait_for(host, port, timeout=180):
+              deadline = time.time() + timeout
+              while time.time() < deadline:
+                  with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                      s.settimeout(2)
+                      try:
+                          s.connect((host, port))
+                          return
+                      except OSError:
+                          time.sleep(2)
+              raise RuntimeError(f"Service not reachable: {host}:{port}")
+
+          wait_for("postgres", 5432)
+          wait_for("influxdb", 8086)
+          print("Database services are reachable")
+          PY
+      - name: Run tests
+        run: |
+          git describe
+          echo "$CI_COMMIT_TAG"
+          python3 -m pytest tests
+
+  deploy:
+    name: Publish to PyPI
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/')
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write # Required for PyPI Trusted Publishing.
+    runs-on: ubuntu-latest
+    container: python:3.10-slim@sha256:6ff506466f8b1e981719b468cc0023b8ef000b983cdec0eafe119d01f379e31d
+    steps:
+      - name: Install system dependencies
+        run: apt-get update && apt-get install -y curl git
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Configure Git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --user --upgrade pip setuptools wheel 'twine>=6.1.0' versioneer future-fstrings
+          python3 -m pip install --user -r requirements.txt
+      - name: Test and build package
+        run: |
+          git describe
+          echo "$CI_COMMIT_TAG"
+          python3 -m pytest tests
+          python3 -m build
+      - name: Publish to PyPI
+        run: python3 -m twine upload --verbose --non-interactive dist/*

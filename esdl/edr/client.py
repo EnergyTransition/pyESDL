@@ -34,7 +34,7 @@ class EDRInfo:
     """ the title of the object in the EDR """
     description: str
     """ the description of the object in the EDR """
-    esdl_type: str
+    esdl_type: str | None
     """ the ESDL type of the object in the EDR """
 
 
@@ -42,14 +42,17 @@ class EDRClient:
     """
     Implements an interface to the Energy Data Repository (EDR)
     """
-    def __init__(self, host=None, port=None):
+    def __init__(self, host=None, port=None, timeout: float | tuple[float, float] | None = (5, 30)) -> None:
         """
         Constructor of the EDR client. Uses the public EDR URL by default, but allows to specify a different "host" and
         "port" for using a local EDR instance
 
         :param host: alternative hostname of a EDR instance
         :param port: alternative port of a EDR instance
+        :param timeout: Timeout in seconds as a number or a (connect, read) tuple.
+            Use None to disable timeouts.
         """
+        self.timeout = timeout
         if host:
             self.EDR_URL = host + ":" + port
         else:
@@ -70,7 +73,7 @@ class EDRClient:
 
         obj_list = list()
 
-        r = requests.get(url)
+        r = requests.get(url, timeout=self.timeout)
         if r.status_code == 200:
             result = json.loads(r.text)
 
@@ -99,7 +102,7 @@ class EDRClient:
             'User-Agent': "pyESDL/EDRClient"
         }
 
-        r = requests.get(url, headers=headers)
+        r = requests.get(url, headers=headers, timeout=self.timeout)
         if r.status_code == 200:
             result = json.loads(r.text)
 

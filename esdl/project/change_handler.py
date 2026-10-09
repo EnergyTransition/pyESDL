@@ -18,8 +18,8 @@ from pyecore.ecore import EStructuralFeature, EAttribute, EObject, EClass, ERefe
 from pyecore.valuecontainer import ECollection, EList
 
 from esdl.resources.xmlresource import XMLResource
-from esdlproject import Set, Add, Remove, Delete, Variant, DetailedChange
-from esdlproject.MergeConflictHandler import MergeConflictHandler, ConflictResolution, get_variant, \
+from esdl.project import Set, Add, Remove, Delete, Variant, DetailedChange
+from esdl.project.MergeConflictHandler import MergeConflictHandler, ConflictResolution, get_variant, \
     update_fragment_list_index
 
 logger = logging.getLogger(__name__)

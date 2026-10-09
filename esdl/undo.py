@@ -23,12 +23,12 @@ from pyecore.ecore import EObject, EStructuralFeature, EReference, EAttribute
 from pyecore.notification import EObserver, Notification, Kind
 from pyecore.resources import Resource
 
-import esdlproject.esdlproject as ep
+from esdl.project import esdlproject as ep
 from esdl.resources.xmlresource import XMLResource
 from esdl.undo_pyecore_patch import patch_notification_system
-from esdlproject import HighLevelChange
-from esdlproject.ChangeSerializer import deepcopy_eobject_change, filterDoubleConnectedTo
-from esdlproject.change_handler import undoChange, applyChange
+from esdl.project import HighLevelChange
+from esdl.project.ChangeSerializer import deepcopy_eobject_change, filterDoubleConnectedTo
+from esdl.project.change_handler import undoChange, applyChange
 
 patch_notification_system()  # patch pyecores notification system, so notification are always send
 

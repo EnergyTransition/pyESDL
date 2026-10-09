@@ -15,7 +15,7 @@
 from pyecore.ecore import EObject, EClass, EAttribute
 from pyecore.utils import alias
 
-import esdlproject
+from esdl import project
 from esdl import support_functions, esdl
 
 
@@ -80,11 +80,11 @@ def patch_esdl():
     esdl.Area.__repr__ = \
         lambda x: f'<{x.eClass.name}[{x.name}] of {x.eContainer().name if x.eContainer() and hasattr(x.eContainer(), "name") else None}, id="{x.id}">'
 
-    esdlproject.DetailedChange.__repr__ = \
+    project.DetailedChange.__repr__ = \
         lambda x: f'<{x.eClass.name} {attr_string(x)}>'
         #lambda x: f'<{x.eClass.name} ownerFragment="{x.ownerFragment}", feature="{x.feature}", stringValue="{x.stringValue}", previousValue="{x.previousValue}", objectFragment="{x.objectFragment}">'
-    esdlproject.HighLevelChange.__repr__ = \
+    project.HighLevelChange.__repr__ = \
         lambda x: f'<{x.eClass.name} label="{x.label}", len(change)={len(x.change)}>'
-    esdlproject.Variant.__repr__ = \
+    project.Variant.__repr__ = \
         lambda x: f'<{x.eClass.name} name="{x.name}">'
 

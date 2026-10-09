@@ -36,7 +36,7 @@ from datetime import datetime
 from typing import List
 from weakref import WeakKeyDictionary
 
-from esdlproject import Variant, DetailedChange, AbstractChange, HighLevelChange
+from esdl.project import Variant, DetailedChange, AbstractChange, HighLevelChange
 
 logger = logging.getLogger(__name__)
 

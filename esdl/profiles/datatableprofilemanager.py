@@ -336,7 +336,7 @@ class DataTableProfileManager(ProfileManager):
                     downsample_bucket_sec=downsample_bucket_sec,
                     column_based=column_based,
                 )
-                qaus = [m.qau for m in metadata]
+                qaus = [m.qau if m else None for m in metadata]
                 return profile_data_list, profile_header, qaus
             elif configuration.type == esdl.DatabaseTypeEnum.INFLUXDB:
                 # TODO: support Influxdb
