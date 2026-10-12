@@ -70,6 +70,9 @@ def deepcopy_eobject_change(eobject: EObject,
                             continue
                         if x.many:
                             for orig_ref_value in orig_value:
+                                if opposite and orig_ref_value.eResource is None:
+                                    # The opposite reference is captured when its object is added to the resource.
+                                    continue
                                 fragment = orig_ref_value.eURIFragment()
                                 change = Add(ownerFragment=k.eURIFragment(), objectFragment=fragment, feature=x.name)
                                 changeList.append(change)
