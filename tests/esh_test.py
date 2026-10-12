@@ -67,10 +67,26 @@ class TestPyESDL(unittest.TestCase):
         print(es)
         esh.save(filename=self._test_esdl_path)
 
+        loaded_es = EnergySystemHandler().load_file(self._test_esdl_path)
+        self.assertEqual(loaded_es.id, es.id)
+        self.assertEqual(loaded_es.name, "ES1")
+        self.assertEqual(loaded_es.description, "Nice Energy System")
+        self.assertEqual(len(loaded_es.instance), 1)
+        self.assertEqual(loaded_es.instance[0].name, "instance 1")
+        self.assertEqual(loaded_es.instance[0].area.name, "Area 51")
+        self.assertEqual(len(loaded_es.instance[0].area.asset), 0)
+
     def test_example2(self):
+        # Create the input from Example 1 so this test can also run on its own.
+        esh = EnergySystemHandler()
+        esh.create_empty_energy_system(
+            name="ES1", es_description="Nice Energy System", inst_title="instance 1", area_title="Area 51"
+        )
+        esh.save(filename=self._test_esdl_path)
+
         esh = EnergySystemHandler()
         # load an ESDL file and use type hinting to help the IDE to do auto completion
-        es = esh.load_file(self._test_esdl_path)
+        es: esdl.EnergySystem = esh.load_file(self._test_esdl_path)
         print(es)
         # Create a WindTurbine
         wind_turbine = esdl.WindTurbine(
@@ -78,7 +94,13 @@ class TestPyESDL(unittest.TestCase):
         )
 
         # print the wind turbines properties in ESDL as a dict
-        pprint(esh.attr_to_dict(wind_turbine))
+        properties = esh.attr_to_dict(wind_turbine)
+        pprint(properties)
+        self.assertEqual(properties["esdlType"], "WindTurbine")
+        self.assertEqual(properties["name"], "WindTurbine at coast")
+        self.assertEqual(properties["rotorDiameter"], 50.0)
+        self.assertEqual(properties["height"], 100.0)
+        self.assertEqual(properties["type"], esdl.WindTurbineTypeEnum.WIND_ON_COAST)
 
         # Get the area where this windturbine should be added
         area51: esdl.Area = es.instance[0].area
@@ -95,6 +117,22 @@ class TestPyESDL(unittest.TestCase):
         # Convert the Energy System to an XML string and print it
         xml_string = esh.to_string()
         print(xml_string)
+
+        saved_es = EnergySystemHandler().load_file(self._test_esdl_path)
+        xml_es = EnergySystemHandler().load_from_string(xml_string)
+        for loaded_es in (saved_es, xml_es):
+            with self.subTest(energy_system=loaded_es):
+                self.assertEqual(loaded_es.instance[0].area.name, "Area 51")
+                self.assertEqual(len(loaded_es.instance[0].area.asset), 1)
+                loaded_turbine = loaded_es.instance[0].area.asset[0]
+                self.assertIsInstance(loaded_turbine, esdl.WindTurbine)
+                self.assertEqual(loaded_turbine.name, "WindTurbine at coast")
+                self.assertEqual(loaded_turbine.rotorDiameter, 50.0)
+                self.assertEqual(loaded_turbine.height, 100.0)
+                self.assertEqual(loaded_turbine.type, esdl.WindTurbineTypeEnum.WIND_ON_COAST)
+                self.assertIsInstance(loaded_turbine.geometry, esdl.Point)
+                self.assertAlmostEqual(loaded_turbine.geometry.lat, 52.6030475337285)
+                self.assertAlmostEqual(loaded_turbine.geometry.lon, 4.729614257812501)
 
     # def test_external_reference(self):
     #     import edd # make sure edd model is loaded.

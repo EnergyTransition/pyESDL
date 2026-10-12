@@ -159,6 +159,17 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 - Improved datetime parsing
 - Improved copy functionality and range attribute fixes
+- Add project management with variants and undo/redo tracking
+- Require Python 3.10 or newer
+- Update PyEcore to 0.15.2
+- Bundle the ESDL metamodel for offline documentation generation
+- Add configurable request timeouts to the EDR client
+- Fix shared default properties in GeoJSON features
+- Fix quoting of PostgreSQL column names
+- Fix sample counts when loading PostgreSQL profiles
+- Fix PostgreSQL profile loading when quantity and unit metadata is missing
+- Fix PostgreSQL metadata error logging and propagate write failures
+- Add GitHub Actions testing for Python 3.10 through 3.14 and PyPI Trusted Publishing
 
 ## Version 26.10
 

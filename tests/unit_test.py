@@ -66,6 +66,13 @@ class ESDLUnitTest(unittest.TestCase):
         unit = build_qau_from_unit_string("TWh")
         self.assertEqual(unit.multiplier, esdl.MultiplierEnum.TERA)
 
+        unit = build_qau_from_unit_string("TWh", "Energy")
+        self.assertIsInstance(unit, esdl.QuantityAndUnitType)
+        self.assertEqual(unit.physicalQuantity, esdl.PhysicalQuantityEnum.ENERGY)
+        self.assertEqual(unit.unit, esdl.UnitEnum.WATTHOUR)
+        self.assertEqual(unit.multiplier, esdl.MultiplierEnum.TERA)
+        self.assertEqual(qau_to_string(unit), "ENERGY in TWh")
+
     def test_convert_tonne_unit(self):
         tonne_unit = build_qau_from_unit_string("t", "weight")
         kg_unit = build_qau_from_unit_string("kg", "weight")

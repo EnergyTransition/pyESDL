@@ -139,6 +139,45 @@ class TestProjectManager(unittest.TestCase):
         self.assertIs(loaded_producer.port[0].carrier, loaded_es.energySystemInformation.carriers.carrier[0])
         self.assertIsNot(loaded_producer.port[0].carrier, carrier)
 
+    def test_readme_example3(self):
+        pm = ProjectManager()
+        stack = pm.get_undo_redo_stack()
+        with stack.track_changes("Add pipe"):
+            pipe = esdl.Pipe(id="pipe", name="Pipe")
+            pm.get_active_energy_system().instance[0].area.asset.append(pipe)
+
+        self.assertEqual(len(pm.get_active_variant().change), 1)
+        change = pm.get_active_variant().change[0]
+        self.assertEqual(change.label, "Add pipe")
+        parent = pm.active_variant
+
+        child = create_new_variant(pm.active_variant, "Child variant")
+        pm.set_active_variant(child)
+        self.assertIs(pm.get_active_variant(), child)
+        self.assertIs(child.parentVariant, parent)
+        self.assertEqual(len(child.change), 0)
+        self.assertEqual(len(pm.get_active_energy_system().instance[0].area.asset), 1)
+        inherited_pipe = pm.get_active_energy_system().instance[0].area.asset[0]
+        self.assertIsInstance(inherited_pipe, esdl.Pipe)
+        self.assertEqual(inherited_pipe.id, "pipe")
+        self.assertEqual(inherited_pipe.name, "Pipe")
+
+        loaded_pm = ProjectManager()
+        loaded_pm.load_from_string(pm.save())
+        loaded_pm.set_active_variant(loaded_pm.get_variant_by_id(child.id))
+        loaded_child = loaded_pm.get_active_variant()
+        self.assertEqual(loaded_child.id, child.id)
+        self.assertEqual(loaded_child.name, "Child variant")
+        self.assertEqual(loaded_child.parentVariant.id, parent.id)
+        self.assertEqual(len(loaded_child.parentVariant.change), 1)
+        self.assertEqual(loaded_child.parentVariant.change[0].label, "Add pipe")
+        loaded_es = loaded_pm.get_active_energy_system()
+        self.assertEqual(len(loaded_es.instance[0].area.asset), 1)
+        loaded_pipe = loaded_es.instance[0].area.asset[0]
+        self.assertIsInstance(loaded_pipe, esdl.Pipe)
+        self.assertEqual(loaded_pipe.id, "pipe")
+        self.assertEqual(loaded_pipe.name, "Pipe")
+
     def test_search_variant(self):
         pm = ProjectManager()
         v1 = create_new_variant(pm.active_variant, variant_name="v1")
