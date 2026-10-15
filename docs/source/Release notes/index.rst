@@ -1,6 +1,16 @@
 Release notes
 =============
 
+Version 26.10.2
+---------------
+- Fix PyProj dependency compatibility for geometry and all installations on Python 3.10
+- Declare Requests, lxml and ordered-set as core dependencies
+- Allow dependency patch updates while keeping PyEcore, Shapely and GeoJSON pinned
+- Remove the redundant Psycopg binary dependency
+- Test core, profiles, geometry and all installations from built wheels on Python 3.10 through 3.14
+- Replace live EDR requests in tests with mocked responses
+- Remove GitLab CI configuration
+
 Version 26.10.1
 ---------------
 - Improved datetime parsing

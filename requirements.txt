@@ -1,6 +1,8 @@
 versioneer==0.29 # for versioning everything
 pyecore==0.15.2 # for reading esdl files
-requests==2.34.2 # for the EDR client
+requests~=2.34.2 # for the EDR client
+lxml
+ordered-set
 #future-fstrings==1.2.0 # required by pyEcore
 pyecoregen==0.5.1 # for generating esdl classes
 twine>=5.1.1 # for publishing in the PyPi repo
@@ -19,8 +21,8 @@ pytest
 #docutils~=0.16
 #log4p>=2019.7.13.3
 
-influxdb==5.3.1
-openpyxl==3.1.2
+influxdb~=5.3.1
+openpyxl~=3.1.2
 # shapely==2.0.6
 shapely==2.1.2
 geojson==3.1.0
@@ -28,15 +30,13 @@ geojson==3.1.0
 numpy==2.2.6 ; python_version <= "3.10"
 numpy==2.4.4 ; python_version >= "3.11"
 # pyproj==3.6.1
-pyproj==3.6.1 ; python_version <= "3.10"
-pyproj==3.7.2 ; python_version >= "3.11"
+pyproj~=3.6.1 ; python_version < "3.11"
+pyproj~=3.7.2 ; python_version >= "3.11"
 pytz==2023.3.post1
 
 # for postgres support
 # psycopg[binary]==3.2.9
-# psycopg-binary==3.2.9 # to make sure the binary is also installed
-psycopg[binary]==3.3.3
-psycopg-binary==3.3.3 # to make sure the binary is also installed
+psycopg[binary]~=3.3.3
 
 sphinx==7.2.6
 sphinx_rtd_theme==1.3.0
