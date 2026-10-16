@@ -1,6 +1,11 @@
 Release notes
 =============
 
+Version 26.10.2
+---------------
+- Add fix for Base64 image data of EnergyDataDescription (EDD) for the EDR
+- Add documentation to Ecore model of EDD
+
 Version 26.10.1
 ---------------
 - Improved datetime parsing

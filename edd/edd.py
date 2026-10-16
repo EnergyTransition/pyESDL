@@ -17,7 +17,7 @@ AnnotationTypeEnum = EEnum('AnnotationTypeEnum', literals=[
 
 
 class EnergyDataDescription(EObject, metaclass=MetaEClass):
-
+    """Used to describe additional meta-data about a piece of ESDL. It allows you to add 'annotations' to describe general information about the technology, its technical dimensions, costs, energy and material flows, emissions and other relevant information. You can also add an image to visualise the technology."""
     id = EAttribute(eType=EString, unique=True, derived=False, changeable=True)
     title = EAttribute(eType=EString, unique=True, derived=False, changeable=True)
     description = EAttribute(eType=EString, unique=True, derived=False, changeable=True)
@@ -85,11 +85,12 @@ class EnergyDataDescription(EObject, metaclass=MetaEClass):
 
 
 class Image(EObject, metaclass=MetaEClass):
-    """Adds the possiblity to add an image to the EDD"""
+    """Adds the possiblity to add an image to an Energy Data Description"""
     contentType = EAttribute(eType=EString, unique=True, derived=False, changeable=True)
     imageData = EAttribute(eType=EByteArray, unique=True, derived=False, changeable=True)
+    base64ImageData = EAttribute(eType=EString, unique=True, derived=False, changeable=True)
 
-    def __init__(self, *, contentType=None, imageData=None):
+    def __init__(self, *, contentType=None, imageData=None, base64ImageData=None):
         # if kwargs:
         #    raise AttributeError('unexpected arguments: {}'.format(kwargs))
 
@@ -100,6 +101,9 @@ class Image(EObject, metaclass=MetaEClass):
 
         if imageData is not None:
             self.imageData = imageData
+
+        if base64ImageData is not None:
+            self.base64ImageData = base64ImageData
 
 
 @abstract
@@ -119,7 +123,7 @@ It is up to the software to place these annotations in the correct place in the 
 
 
 class ESDLDriveMetaData(EObject, metaclass=MetaEClass):
-
+    """ESDLDriveMetaData is used to describe some additional information about content in the ESDL Drive"""
     name = EAttribute(eType=EString, unique=True, derived=False, changeable=True)
     metadata = EReference(ordered=True, unique=True, containment=True, derived=False, upper=-1)
 
@@ -137,7 +141,7 @@ class ESDLDriveMetaData(EObject, metaclass=MetaEClass):
 
 
 class ResourceMetaData(EObject, metaclass=MetaEClass):
-
+    """ResourceMetaData describes meta data of a CDO Resource (e.g. a file in the ESDL Drive), specifically the size of the file when converted to XML and the amount of object that the file exists of."""
     resourcePath = EAttribute(eType=EString, unique=True, derived=False, changeable=True)
     byteSize = EAttribute(eType=ELong, unique=True, derived=False, changeable=True)
     objectCount = EAttribute(eType=ELong, unique=True, derived=False, changeable=True)
@@ -163,7 +167,7 @@ class ResourceMetaData(EObject, metaclass=MetaEClass):
 
 
 class CategoryAnnotation(Annotation):
-    """The CategoryAnnotation allows to annotate an ESDL based on predifined categories.
+    """The CategoryAnnotation allows to annotate an ESDL based on predifined categories, such as general information about the technology, its technical dimensions, costs, energy and material flows, emissions and other relevant information
 - The type attribute allows you to select the type of annotation (e.g. a cost annotation)
 - The explanation attribute is a free text field to describe the explanation in detail
 """
