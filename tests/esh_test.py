@@ -16,6 +16,8 @@ import os
 import tempfile
 import unittest
 import uuid
+from importlib import import_module
+from pathlib import Path
 from pprint import pprint
 
 from esdl import Carriers, EnergySystemInformation, esdl
@@ -34,6 +36,23 @@ class TestPyESDL(unittest.TestCase):
 
     def test_print_version(self):
         print("pyESDL version", EnergySystemHandler.version())
+
+    def test_package_imports(self):
+        extra = os.getenv("PYESDL_TEST_EXTRA", "all")
+        self.assertIn(extra, ("core", "profiles", "geometry", "all"))
+        for package_name in ("esdl", "edd"):
+            package = import_module(package_name)
+            package_dir = Path(package.__file__).parent
+            for filename in sorted(package_dir.rglob("*.py")):
+                parts = filename.relative_to(package_dir).with_suffix("").parts
+                if package_name == "esdl" and parts[0] in ("profiles", "geometry"):
+                    if extra not in (parts[0], "all"):
+                        continue
+                if parts[-1] == "__init__":
+                    parts = parts[:-1]
+                module_name = ".".join((package_name, *parts))
+                with self.subTest(module=module_name):
+                    import_module(module_name)
 
     def test_esh(self):
         esh = EnergySystemHandler()

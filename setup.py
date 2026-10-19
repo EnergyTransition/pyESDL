@@ -19,8 +19,13 @@ if version < (3, 10):
 
 
 extras_require = {
-    "profiles": ["influxdb==5.3.1", "openpyxl==3.1.2", "psycopg[binary]==3.3.3", "psycopg-binary==3.3.3"],
-    "geometry": ["shapely==2.1.2", "geojson==3.1.0", "pyproj==3.7.2"],
+    "profiles": ["influxdb~=5.3.1", "openpyxl~=3.1.2", "psycopg[binary]~=3.3.3"],
+    "geometry": [
+        "shapely==2.1.2",
+        "geojson==3.1.0",
+        "pyproj~=3.6.1; python_version < '3.11'",
+        "pyproj~=3.7.2; python_version >= '3.11'",
+    ],
 }
 extras_require['all'] = list(itertools.chain.from_iterable(extras_require.values()))
 
@@ -40,7 +45,10 @@ setuptools.setup(
     author_email='ewoud.werkman@tno.nl',
     python_requires='>=3.10',
     install_requires=[
-        'pyecore==0.15.2'
+        'pyecore==0.15.2',  # Undo/redo patches depend on PyEcore internals.
+        'requests~=2.34.2',
+        'lxml',
+        'ordered-set'
     ],
     extras_require=extras_require,
     # test_suite='setup.my_test_suite',

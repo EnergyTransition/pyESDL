@@ -70,7 +70,7 @@ def profile_fixture():
     csv_profile = esdl.DataTableProfile(
         id=str(uuid.uuid4()),
         configuration=esdl.FileConfiguration(
-            uri=str(Path(__file__).parent / "data" / "test_profile.csv"),
+            uri=str(Path(__file__).parents[1] / "data" / "test_profile.csv"),
             type=esdl.FileTypeEnum.CSV,
         ),
     )

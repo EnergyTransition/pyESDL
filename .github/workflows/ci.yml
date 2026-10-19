@@ -15,11 +15,13 @@ env:
 
 jobs:
   test:
-    name: test (${{ matrix.python-version }})
+    name: test (${{ matrix.python-version }}, ${{ matrix.extra }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        extra: [core, profiles, geometry, all]
         include:
           - python-version: '3.10'
             image: python:3.10-slim@sha256:6ff506466f8b1e981719b468cc0023b8ef000b983cdec0eafe119d01f379e31d
@@ -34,17 +36,18 @@ jobs:
     container: ${{ matrix.image }}
     services:
       postgres:
-        image: postgis/postgis:17-master@sha256:d47fe8c1bf27fa2a498899e7a2bc572af002a7f882b91c07795f0509f96ef027
+        image: ${{ (matrix.extra == 'profiles' || matrix.extra == 'all') && 'postgis/postgis:17-master@sha256:d47fe8c1bf27fa2a498899e7a2bc572af002a7f882b91c07795f0509f96ef027' || '' }}
         env:
           POSTGRES_DB: energy_profiles
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
       influxdb:
-        image: influxdb:1.7@sha256:a25a134e87489cb3e642c712576cf8471667b0cad1cfd65727d453fb40e759d8
+        image: ${{ (matrix.extra == 'profiles' || matrix.extra == 'all') && 'influxdb:1.7@sha256:a25a134e87489cb3e642c712576cf8471667b0cad1cfd65727d453fb40e759d8' || '' }}
         env:
           INFLUXDB_ADMIN_USER: admin
           INFLUXDB_ADMIN_PASSWORD: admin
     env:
+      PYESDL_TEST_EXTRA: ${{ matrix.extra }}
       POSTGRES_DB: energy_profiles
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
@@ -68,11 +71,29 @@ jobs:
           persist-credentials: false
       - name: Configure Git
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: Install Python dependencies
+      - name: Build package
         run: |
-          python3 -m pip install --user --upgrade setuptools wheel twine versioneer future-fstrings
-          python3 -m pip install --user -r requirements.txt
+          python3 -m pip install --user build==1.2.2.post1
+          python3 -m build
+      - name: Install package
+        run: |
+          python3 -m venv "$RUNNER_TEMP/package-venv"
+          set -- dist/*.whl
+          wheel=$1
+          if [ "$PYESDL_TEST_EXTRA" != core ]; then
+            wheel="${wheel}[$PYESDL_TEST_EXTRA]"
+          fi
+          "$RUNNER_TEMP/package-venv/bin/python" -m pip install pytest "$wheel"
+          "$RUNNER_TEMP/package-venv/bin/python" -m pip check
+          mkdir -p "$RUNNER_TEMP/package-tests"
+          cp -r tests setup.cfg run-python-matrix.sh "$RUNNER_TEMP/package-tests/"
+      - name: Test package imports
+        run: |
+          cd "$RUNNER_TEMP/package-tests"
+          unset PYTHONPATH
+          "$RUNNER_TEMP/package-venv/bin/python" -m pytest tests/esh_test.py -k test_package_imports
       - name: Wait for database services
+        if: matrix.extra == 'profiles' || matrix.extra == 'all'
         run: |
           python3 - <<'PY'
           import socket
@@ -98,7 +119,9 @@ jobs:
         run: |
           git describe
           echo "$CI_COMMIT_TAG"
-          python3 -m pytest tests
+          cd "$RUNNER_TEMP/package-tests"
+          unset PYTHONPATH
+          PATH="$RUNNER_TEMP/package-venv/bin:$PATH" bash run-python-matrix.sh --test
 
   deploy:
     name: Publish to PyPI
