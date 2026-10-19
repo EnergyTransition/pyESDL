@@ -155,8 +155,11 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 ## Changes
 
-## Version 26.10.2
+## Version 26.10.3
+- Add fix for Base64 image data of EnergyDataDescription (EDD) for the EDR
+- Add documentation to Ecore model of EDD
 
+## Version 26.10.2
 - Fix PyProj dependency compatibility for geometry and all installations on Python 3.10
 - Declare Requests, lxml and ordered-set as core dependencies
 - Allow dependency patch updates while keeping PyEcore, Shapely and GeoJSON pinned
