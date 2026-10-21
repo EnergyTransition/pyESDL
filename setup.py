@@ -47,6 +47,7 @@ setuptools.setup(
     install_requires=[
         'pyecore==0.15.2',  # Undo/redo patches depend on PyEcore internals.
         'requests~=2.34.2',
+        'certifi>=2026.10.19',
         'lxml',
         'ordered-set'
     ],
