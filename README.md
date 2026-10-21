@@ -155,6 +155,9 @@ E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh"
 
 ## Changes
 
+## Version 26.10.4
+- Update certifi, pip and CI certificates for the emSign CA compromise
+
 ## Version 26.10.3
 - Add fix for Base64 image data of EnergyDataDescription (EDD) for the EDR
 - Add documentation to Ecore model of EDD

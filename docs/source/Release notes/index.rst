@@ -1,6 +1,10 @@
 Release notes
 =============
 
+Version 26.10.4
+---------------
+- Update certifi, pip and CI certificates for the emSign CA compromise
+
 Version 26.10.3
 ---------------
 - Add fix for Base64 image data of EnergyDataDescription (EDD) for the EDR
