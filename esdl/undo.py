@@ -802,11 +802,11 @@ class ChangeTracker:
 
     def get_tracker(self, eobj: EObject = None, resource: Resource = None) -> Optional[Tracker]:
         """
-        Returns the CommandStack for the resource of eobj or the resource given by the resource parameter
+        Find the tracker for the resource of eobj or the given resource.
         One of the parameters is required.
 
-        :eobj: an EObject (any class in the ESDL)
-        :resource: the resource used to store the ESDL
+        :param eobj: an EObject (any class in the ESDL)
+        :param resource: the resource used to store the ESDL
         """
         if resource is None and eobj is not None:
             resource = eobj.eResource

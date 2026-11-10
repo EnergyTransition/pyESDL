@@ -576,7 +576,7 @@ class ProjectManager:
     #             logger.warn(f"Fixme: ignoring DetailedChanges at this level")
 
     def get_variants(self) -> list[Variant]:
-        """"
+        """
         Creates a flat list of all the variants.
         """
         variants: list[Variant] = []
@@ -587,7 +587,7 @@ class ProjectManager:
         return variants
 
     def get_energy_systems(self) -> list[esdl.EnergySystem]:
-        """"
+        """
         Creates a list of all the variants associated energy systems (but not of the variantCollection energy system,
         as each variantCollection has its own main variant by convention). This only returns the snapshots of the
         variants that have a snapshot; it doesn't create new snapshots.
@@ -636,8 +636,6 @@ class ProjectManager:
     def get_energy_system(self, variant: Variant) -> esdl.EnergySystem:
         """
         Get the energy system of a variant. If the snapshot does not exist, it is created.
-        :param variant:
-        :return:
         """
         return self.get_or_create_variant_snapshot(variant)
 
@@ -906,14 +904,11 @@ class ProjectManager:
 
     def get_undo_redo_stack(self, eobj: EObject = None, es_id: str = None) -> UndoRedoCommandStack:
         """
-        Return the undo-redo stack of this EnergySystemHandler for a specific ESDL object (when eobj = not None)
-        or by the current active es_id (es_id is not None)
+        Get the undo-redo stack for an ESDL object or energy system ID.
+        If neither is provided, use the active variant's stack.
 
         :param eobj: the ESDL object to get the undo-redo stack for
         :param es_id: the ESDL energy system ID to get the undo-redo stack for
-        :return: the undo-redo stack of this EnergySystemHandler for a specific ESDL object
-
-
         """
         if eobj:
             return self.change_tracker.get_tracker_stack(eobj=eobj)
@@ -925,6 +920,7 @@ class ProjectManager:
 
     def energy_system_to_string(self, es_id: str) -> str:
         """
+        Serialize the energy system with the given ID.
         """
         with self.save_resource_lock:
             resource = self.get_energy_system_resource_by_id(es_id)
