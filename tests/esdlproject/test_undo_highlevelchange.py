@@ -215,7 +215,7 @@ class TestNewUndo(unittest.TestCase):
         self.assertEqual(len(es.instance[0].area.asset), 1)
         self.assertEqual(es.instance[0].area.asset[0].name, pp.name)
         self.assertEqual(es.instance[0].area.asset[0].type, esdl.PowerPlantTypeEnum.COMBINED_CYCLE_GAS_TURBINE)
-        print(pm.to_debug_string())
+        print(pm._to_debug_string())
 
     def test_add_and_delete_object_with_xrefs(self):
         pm = ProjectManager()
@@ -300,7 +300,7 @@ class TestNewUndo(unittest.TestCase):
         # but on attributes is ok
         print(eobject_to_string(es, ESDLFormat.XML, {JsonOptions.INDENT: 2}))
         self.assertEqual(len(es.instance[0].area.asset), 0)
-        print(pm.to_debug_string())
+        print(pm._to_debug_string())
 
     def test_delete_object_with_xrefs(self):
         pm = ProjectManager()
@@ -338,7 +338,7 @@ class TestNewUndo(unittest.TestCase):
         # but on attributes is ok
         print(eobject_to_string(es, ESDLFormat.XML, {JsonOptions.INDENT: 2}))
         self.assertEqual(len(es.instance[0].area.asset), 0)
-        print(pm.to_debug_string())
+        print(pm._to_debug_string())
 
 
 if __name__ == '__main__':
