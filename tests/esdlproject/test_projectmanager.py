@@ -178,7 +178,7 @@ class TestProjectManager(unittest.TestCase):
         self.assertEqual(loaded_pipe.id, "pipe")
         self.assertEqual(loaded_pipe.name, "Pipe")
 
-    def test_refresh_variant(self):
+    def test_get_energy_system_refresh(self):
         pm = ProjectManager()
         variant = pm.get_active_variant()
         original = pm.get_energy_system(variant)
@@ -187,12 +187,12 @@ class TestProjectManager(unittest.TestCase):
             original.instance[0].area.asset.append(esdl.Pipe(id="pipe", name="Pipe"))
         original.description = "Unrecorded change"
 
-        refreshed = pm.refresh_variant(variant)
-        self.assertIsNot(refreshed, original)
-        self.assertIs(pm.get_energy_system(variant), refreshed)
+        refreshed_es = pm.get_energy_system(variant, refresh=True)
+        self.assertIsNot(refreshed_es, original)
+        self.assertIs(pm.get_energy_system(variant), refreshed_es)
         self.assertIs(pm.get_active_variant(), variant)
-        self.assertIsNone(refreshed.description)
-        self.assertEqual([asset.id for asset in refreshed.instance[0].area.asset], ["pipe"])
+        self.assertIsNone(refreshed_es.description)
+        self.assertEqual([asset.id for asset in refreshed_es.instance[0].area.asset], ["pipe"])
         self.assertIsNone(pm.change_tracker.get_tracker(resource=original.eResource))
 
     def test_search_variant(self):

@@ -465,25 +465,12 @@ class ProjectManager:
     def get_active_variant(self) -> Variant | None:
         return self.active_variant
 
-    def refresh_variant(self, variant: Variant) -> esdl.EnergySystem:
-        """
-        Rebuild a variant's energy system without changing the active variant. Apply inherited changes and preserve the
-        variant's undo position.
-
-        Note that objects retrieved before this operation are now detached, so you need to get them from the energy
-        system again.
-        """
-        with self.active_variant_lock:
-            self._replay_parent_variant_changes(variant, refresh_snapshot=True)
-            self.variant_activation_timestamps[variant.id] = datetime.now(timezone.utc)
-            return self.get_energy_system(variant)
-
     def remove_variant_snapshot(self, variant: Variant) -> None:
         """
         Remove the snapshot of the given variant. This will also remove the resource from the resource set. This is
         used when we want to recreate the snapshot of a variant.
 
-        :deprecated: Consider using refresh_variant() instead.
+        :deprecated: Consider using get_energy_system(variant, refresh=True) instead.
         :param variant:
         :return:
         """
@@ -666,10 +653,21 @@ class ProjectManager:
         """
         return variant.snapshotRef
 
-    def get_energy_system(self, variant: Variant) -> esdl.EnergySystem:
+    def get_energy_system(self, variant: Variant, refresh: bool = False) -> esdl.EnergySystem:
         """
         Get the energy system of a variant. If the snapshot does not exist, it is created.
+
+        When refresh is True, the method rebuilds the variant's energy system without changing the active variant,
+        applies inherited changes, and preserves the variant's undo position.
+
+        Note that objects retrieved before this operation are now detached, so you need to get them from the energy
+        system again.
         """
+        if refresh:
+            with self.active_variant_lock:
+                self._replay_parent_variant_changes(variant, refresh_snapshot=True)
+                self.variant_activation_timestamps[variant.id] = datetime.now(timezone.utc)
+                return self.get_or_create_variant_snapshot(variant)
         return self.get_or_create_variant_snapshot(variant)
 
     def get_or_create_variant_snapshot(self, variant: Variant) -> esdl.EnergySystem | None:
