@@ -118,7 +118,7 @@ def load_profile_data_and_header(
     enable_cache: bool = False,
     apply_multiplier: bool = True,
     close_connection_after_load: bool = True,
-) -> tuple[Any | None, list[Any] | None]:
+) -> tuple[list[list[Any]] | None, list[str] | None]:
     """
     Retrieve the profile data list and header for a given profile with time varying data, any of type:
         DataTableProfile, InfluxDBProfile, TimeSeriesProfile, DateTimeProfile or ProfileReference.
@@ -131,7 +131,7 @@ def load_profile_data_and_header(
     :param apply_multiplier: Whether to apply the profile multiplier to the data values, default is True.
     :param close_connection_after_load: If True (default), close DB connection after loading data.
         If False, callers must close connections manually via close_db_connections().
-    :return: The profile header and data list, or (None, None).
+    :return: The profile data list and header, or (None, None).
     """
     if isinstance(profile, ProfileReference):
         profile = _get_referenced_profile(profile)
@@ -148,7 +148,7 @@ def load_profile_data_and_header(
                 if apply_multiplier and dtp.multiplier is not None and data_list is not None:
                     # apply multiplier to cached data, skip first datetime column
                     data_list = [[row[0]] + [value * dtp.multiplier for value in row[1:]] for row in data_list]
-                return (data_list, header)
+                return data_list, header
 
         # load from database
         dtp_manager = DataTableProfileManager(dtp)
