@@ -20,6 +20,12 @@ class RenameClass(ESDLVesionMapping):
     class_new_name: str
 
 
+@dataclass
+class RemoveAttribute(ESDLVesionMapping):
+    class_name: str
+    attribute_name: str
+
+
 # @dataclass
 # class RemoveReasignClass(Mapping):
 #     class_name: str

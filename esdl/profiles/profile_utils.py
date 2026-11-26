@@ -372,6 +372,7 @@ def create_data_table_profile(
         id=str(uuid.uuid4()),
         tableName=table_name,
         columnName=column_name,
+        schema=schema,
         startDate=start_date,
         endDate=end_date,
         multiplier=multiplier,
@@ -389,8 +390,6 @@ def create_data_table_profile(
         database=database_name,
         host=db_host,
     )
-    if schema is not None:
-        db_config.schema = schema
     if db_port is not None:
         db_config.port = db_port
 
@@ -398,7 +397,6 @@ def create_data_table_profile(
     db_config_match_attributes = [
         "database",
         "host",
-        "name",
         "port",
         "tls",
         "type",

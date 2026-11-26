@@ -80,6 +80,7 @@ This example consists of the following steps:
         postgres_port = int(os.getenv("PYESDL_POSTGRES_PORT", "1432"))
         postgres_user = os.getenv("PYESDL_POSTGRES_USER", "postgres")
         postgres_password = os.getenv("PYESDL_POSTGRES_PASSWORD", "password")
+        postgres_profile_db = os.getenv("PYESDL_POSTGRES_PROFILE_DB", "timeseries_profile")
 
         influxdb_host = os.getenv("PYESDL_INFLUXDB_HOST", "localhost")
         influxdb_port = int(os.getenv("PYESDL_INFLUXDB_PORT", "1086"))
@@ -132,9 +133,18 @@ This example consists of the following steps:
         )
 
         ### 3. Create and assign multiple profile types:
+
+        # NOTE: Using a fixed database name (postgres_profile_db) combined with a dynamic
+        # schema (model_run_id) for PostgreSQL, but a dynamic database name (model_run_id)
+        # for InfluxDB, is a deliberate design choice rather than a technical requirement.
+        # PostgreSQL supports schemas as an extra grouping level within a database, so a
+        # schema per model run can be used to separate data while keeping a single database.
+        # InfluxDB has no concept of a schema, so a separate database per model run is used
+        # instead to achieve the same kind of separation.
         dtp_postgres1 = create_data_table_profile(
             es=es,
-            database_name=model_run_id,
+            database_name=postgres_profile_db,
+            schema=model_run_id,
             table_name=carrier_network_id,
             column_name="column1",
             start_date=datetime(2019, 1, 1),
@@ -151,7 +161,8 @@ This example consists of the following steps:
 
         dtp_postgres2 = create_data_table_profile(
             es=es,
-            database_name=model_run_id,
+            database_name=postgres_profile_db,
+            schema=model_run_id,
             table_name=carrier_network_id,
             column_name="column2",
             start_date=datetime(2019, 1, 1),

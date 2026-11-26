@@ -42,6 +42,14 @@ class EnergySystemHandler:
         setattr(esdl.ProfileElement, 'from', esdl.ProfileElement.from_)
         alias('start', esdl.ProfileElement.from_)
 
+        esdl.FromToIntItem.from_.name = 'from'
+        setattr(esdl.FromToIntItem, 'from', esdl.FromToIntItem.from_)
+        alias('start', esdl.FromToIntItem.from_)
+
+        esdl.FromToDoubleItem.from_.name = 'from'
+        setattr(esdl.FromToDoubleItem, 'from', esdl.FromToDoubleItem.from_)
+        alias('start', esdl.FromToDoubleItem.from_)
+
         setattr(EObject, '__copy__', support_functions.clone)
         setattr(EObject, 'clone', support_functions.clone)
         setattr(EObject, '__deepcopy__', support_functions.deepcopy)

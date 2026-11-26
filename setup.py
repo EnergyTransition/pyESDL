@@ -8,8 +8,8 @@ import setuptools
 
 version = tuple(sys.version_info[:2])
 
-if version < (3, 7):
-    sys.exit('pyESDL requires at least Python >= 3.7')
+if version < (3, 10):
+    sys.exit('pyESDL requires at least Python >= 3.10')
 
 
 # def my_test_suite():
@@ -19,8 +19,13 @@ if version < (3, 7):
 
 
 extras_require = {
-    "profiles": ["influxdb==5.3.1", "openpyxl==3.1.2", "psycopg[binary]==3.3.3", "psycopg-binary==3.3.3"],
-    "geometry": ["shapely==2.1.2", "geojson==3.1.0", "pyproj==3.7.2"],
+    "profiles": ["influxdb~=5.3.1", "openpyxl~=3.1.2", "psycopg[binary]~=3.3.3"],
+    "geometry": [
+        "shapely==2.1.2",
+        "geojson==3.1.0",
+        "pyproj~=3.6.1; python_version < '3.11'",
+        "pyproj~=3.7.2; python_version >= '3.11'",
+    ],
 }
 extras_require['all'] = list(itertools.chain.from_iterable(extras_require.values()))
 
@@ -29,8 +34,8 @@ setuptools.setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     url="https://energytransition.gitbook.io/esdl/",
-    packages=setuptools.find_packages(),
-    package_data={'': ['README.md', 'LICENSE.md']},
+    packages=setuptools.find_packages(exclude=('tests', 'tests.*')),
+    package_data={'': ['README.md', 'LICENSE.md'], 'esdl': ['esdl.ecore']},
     include_package_data=True,
     license='Apache 2.0',
     long_description_content_type="text/markdown",
@@ -38,9 +43,13 @@ setuptools.setup(
     description="Python implementation of the Energy System Description Language (ESDL) for modelling energy systems",
     author='Ewoud Werkman',
     author_email='ewoud.werkman@tno.nl',
-    python_requires='>=3.7',
+    python_requires='>=3.10',
     install_requires=[
-        'pyecore==0.13.2'
+        'pyecore==0.15.2',  # Undo/redo patches depend on PyEcore internals.
+        'requests~=2.34.2',
+        'certifi>=2026.10.19',
+        'lxml',
+        'ordered-set'
     ],
     extras_require=extras_require,
     # test_suite='setup.my_test_suite',

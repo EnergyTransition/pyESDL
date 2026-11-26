@@ -1,6 +1,6 @@
 from typing import List
 
-from esdl.version_migrations.mapping import RenameAttribute, RenameClass, RemoveReassignEnumValue
+from esdl.version_migrations.mapping import RenameAttribute, RenameClass, RemoveReassignEnumValue, RemoveAttribute
 
 
 version_migration_mapping_rename_attribute: List[RenameAttribute] = [
@@ -11,6 +11,14 @@ version_migration_mapping_rename_attribute: List[RenameAttribute] = [
         class_name="GeothermalSource",
         attribute_name="flowRate",
         attribute_new_name="maximumFlowRate"
+    ),
+]
+
+version_migration_remove_attribute: List[RemoveAttribute] = [
+    RemoveAttribute(
+        id="1",
+        class_name="HeatPump",
+        attribute_name="additionalHeatingSourceType"
     ),
 ]
 

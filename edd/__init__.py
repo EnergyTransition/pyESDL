@@ -1,13 +1,14 @@
 from pyecore.resources import global_registry
 from .edd import getEClassifier, eClassifiers
 from .edd import name, nsURI, nsPrefix, eClass
-from .edd import EnergyDataDescription, Image
+from .edd import EnergyDataDescription, Image, Annotation, AnnotationTypeEnum, CategoryAnnotation, ObjectAnnotation, ESDLDriveMetaData, ResourceMetaData
 
 from pyecore.ecore import EObject
 
 from . import edd
 
-__all__ = ['EnergyDataDescription', 'Image']
+__all__ = ['EnergyDataDescription', 'Image', 'Annotation', 'AnnotationTypeEnum',
+           'CategoryAnnotation', 'ObjectAnnotation', 'ESDLDriveMetaData', 'ResourceMetaData']
 
 eSubpackages = []
 eSuperPackage = None
@@ -16,8 +17,12 @@ edd.eSuperPackage = eSuperPackage
 
 EnergyDataDescription.esdl.eType = EObject
 EnergyDataDescription.image.eType = Image
+EnergyDataDescription.annotation.eType = Annotation
+ObjectAnnotation.about.eType = EObject
+ESDLDriveMetaData.metadata.eType = ResourceMetaData
+ResourceMetaData.resourceReference.eType = EObject
 
-otherClassifiers = []
+otherClassifiers = [AnnotationTypeEnum]
 
 for classif in otherClassifiers:
     eClassifiers[classif.name] = classif

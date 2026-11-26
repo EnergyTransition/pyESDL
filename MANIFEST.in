@@ -2,4 +2,5 @@ include versioneer.py
 include esdl/_version.py
 include README.md
 include LICENSE.md
+include esdl/esdl.ecore
 

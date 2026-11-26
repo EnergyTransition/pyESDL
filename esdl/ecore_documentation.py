@@ -12,6 +12,8 @@
 #  Manager:
 #      TNO
 
+from pathlib import Path
+
 from pyecore.resources import ResourceSet, URI
 from pyecore.utils import DynamicEPackage
 from pyecore.ecore import EModelElement, EAnnotation
@@ -32,7 +34,7 @@ class EcoreDocumentation:
             self.esdl_model = None
             self.resource = None
             if esdlEcoreFile is None:
-                self.esdlEcoreFile = 'https://raw.githubusercontent.com/EnergyTransition/ESDL/master/esdl/model/esdl.ecore'
+                self.esdlEcoreFile = str(Path(__file__).with_name('esdl.ecore'))
             else:
                 self.esdlEcoreFile = esdlEcoreFile
             self._init_metamodel()

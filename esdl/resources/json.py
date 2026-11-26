@@ -8,19 +8,24 @@ import json
 from pyecore.resources.resource import Resource
 from pyecore.ecore import EObject, EProxy, ECollection, EClass, EEnumLiteral, EStringToStringMapEntry
 
+from esdl.resources.resource_type import ProjectManagerResourceType
+
 
 @unique
 class JsonOptions(Enum):
     SERIALIZE_DEFAULT_VALUES = 0
     ENCODER = 1
     DECODER = 2
+    INDENT = 3
 
 
 NO_OBJECT = object()
 
 
 class JsonResource(Resource):
-    def __init__(self, uri=None, use_uuid=False, indent=None, ref_tag='$ref'):
+    type: ProjectManagerResourceType = ProjectManagerResourceType.UNKNOWN
+
+    def __init__(self, uri=None, use_uuid=False, indent=None, ref_tag='$ref', type=ProjectManagerResourceType.UNKNOWN):
         super().__init__(uri, use_uuid)
         self._resolve_later = []
         self._load_href = {}
@@ -28,6 +33,7 @@ class JsonResource(Resource):
         self.ref_tag = ref_tag
         self.mappers = {}
         self.default_mapper = DefaultObjectMapper()
+        self.type = type
 
     def load(self, options=None):
         self.options = options or {}
@@ -51,6 +57,7 @@ class JsonResource(Resource):
 
     def save(self, output=None, options=None):
         self.options = options or {}
+        indent = self.options.get(JsonOptions.INDENT, self.indent)
         stream = self.open_out_stream(output)
         dict_list = []
         for root in self.contents:
@@ -59,7 +66,7 @@ class JsonResource(Resource):
             dict_list = dict_list[0]
 
         encoder = self.options.get(JsonOptions.ENCODER)
-        stream.write(json.dumps(dict_list, indent=self.indent, cls=encoder)
+        stream.write(json.dumps(dict_list, indent=indent, cls=encoder)
                      .encode('utf-8'))
 
         stream.flush()

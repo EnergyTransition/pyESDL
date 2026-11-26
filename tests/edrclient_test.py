@@ -12,7 +12,11 @@
 #  Manager:
 #      TNO
 
+import base64
+import json
 import unittest
+from pathlib import Path
+from unittest.mock import Mock, patch
 
 import esdl
 from esdl.edr.client import EDRClient
@@ -20,6 +24,22 @@ from esdl.edr.client import EDRClient
 
 
 class TestEDRClient(unittest.TestCase):
+
+    def setUp(self) -> None:
+        esdl_file = Path(__file__).parent / "data" / "windturbine_pyecore014_issue_values.esdl"
+        edr_objects = [
+            {
+                "id": "/edr/Public/Assets/WindTurbine.edd",
+                "title": "Wind turbine",
+                "description": "Offshore wind turbine",
+                "esdlType": "WindTurbine",
+                "esdl": base64.b64encode(esdl_file.read_bytes()).decode("ascii"),
+            }
+        ]
+        response = Mock(status_code=200, text=json.dumps(edr_objects))
+        get_patch = patch("esdl.edr.client.requests.get", return_value=response)
+        get_patch.start()
+        self.addCleanup(get_patch.stop)
 
     def test_retrieve_asset_list(self):
         edr_client = EDRClient()

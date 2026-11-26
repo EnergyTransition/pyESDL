@@ -106,6 +106,38 @@ xml_string = esh.to_string()
 print(xml_string)
 ```
 
+### Example 3 - Creating a project with inherited variants
+
+Add a pipe as a tracked change, create a child variant that inherits it, then save and reload the project.
+
+```python
+from esdl import esdl
+from esdl.project.ProjectManager import ProjectManager
+from esdl.project.variant_api import create_new_variant
+
+# Create a project with an empty energy system
+pm = ProjectManager()
+stack = pm.get_undo_redo_stack()
+# Add a pipe as a tracked change
+with stack.track_changes("Add pipe"):
+    pipe = esdl.Pipe(id="pipe", name="Pipe")
+    pm.get_active_energy_system().instance[0].area.asset.append(pipe)
+
+change = pm.get_active_variant().change[0]
+print(change.label)  # Add pipe
+
+# Create and activate a child variant that inherits the pipe
+child = create_new_variant(pm.active_variant, "Child variant")
+pm.set_active_variant(child)
+print(pm.get_active_energy_system().instance[0].area.asset[0].name)  # Pipe
+
+# Save and reload the project, then activate the child variant
+loaded_pm = ProjectManager()
+loaded_pm.load_from_string(pm.save())
+loaded_pm.set_active_variant(loaded_pm.get_variant_by_id(child.id))
+print(loaded_pm.get_active_variant().name)  # Child variant
+```
+
 ### Converting ESDL units
 
 Example:
@@ -122,6 +154,55 @@ Creating QuantityAndUnitTypes from strings is also possible using `build_qau_fro
 E.g. `build_qau_from_unit_string("TWh", 'Energy')` will give you "Energy in TWh" as unit.
 
 ## Changes
+
+## Version 26.10.4
+- Update certifi, pip and CI certificates for the emSign CA compromise
+
+## Version 26.10.3
+- Add fix for Base64 image data of EnergyDataDescription (EDD) for the EDR
+- Add documentation to Ecore model of EDD
+
+## Version 26.10.2
+- Fix PyProj dependency compatibility for geometry and all installations on Python 3.10
+- Declare Requests, lxml and ordered-set as core dependencies
+- Allow dependency patch updates while keeping PyEcore, Shapely and GeoJSON pinned
+- Remove the redundant Psycopg binary dependency
+- Test core, profiles, geometry and all installations from built wheels on Python 3.10 through 3.14
+- Replace live EDR requests in tests with mocked responses
+- Remove GitLab CI configuration
+
+## Version 26.10.1
+
+- Improved datetime parsing
+- Improved copy functionality and range attribute fixes
+- Add project management with variants and undo/redo tracking
+- Require Python 3.10 or newer
+- Update PyEcore to 0.15.2
+- Bundle the ESDL metamodel for offline documentation generation
+- Add configurable request timeouts to the EDR client
+- Fix shared default properties in GeoJSON features
+- Fix quoting of PostgreSQL column names
+- Fix sample counts when loading PostgreSQL profiles
+- Fix PostgreSQL profile loading when quantity and unit metadata is missing
+- Fix PostgreSQL metadata error logging and propagate write failures
+- Add GitHub Actions testing for Python 3.10 through 3.14 and PyPI Trusted Publishing
+
+## Version 26.10
+
+- Updated EnergyDataDescription (EDD) schema
+
+## Version 26.9
+
+- Add support for ESDL release 26.9
+- Implement support for MultiPolygons
+
+## Version 26.7.1
+
+- Fix bug in the profile util function
+
+## Version 26.7
+
+- Fix bug in writing postgres profile data
 
 ## Version 26.6.1
 

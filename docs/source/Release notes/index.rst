@@ -1,6 +1,58 @@
 Release notes
 =============
 
+Version 26.10.4
+---------------
+- Update certifi, pip and CI certificates for the emSign CA compromise
+
+Version 26.10.3
+---------------
+- Add fix for Base64 image data of EnergyDataDescription (EDD) for the EDR
+- Add documentation to Ecore model of EDD
+
+Version 26.10.2
+---------------
+- Fix PyProj dependency compatibility for geometry and all installations on Python 3.10
+- Declare Requests, lxml and ordered-set as core dependencies
+- Allow dependency patch updates while keeping PyEcore, Shapely and GeoJSON pinned
+- Remove the redundant Psycopg binary dependency
+- Test core, profiles, geometry and all installations from built wheels on Python 3.10 through 3.14
+- Replace live EDR requests in tests with mocked responses
+- Remove GitLab CI configuration
+
+Version 26.10.1
+---------------
+- Improved datetime parsing
+- Improved copy functionality and range attribute fixes
+- Add project management with variants and undo/redo tracking
+- Require Python 3.10 or newer
+- Update PyEcore to 0.15.2
+- Bundle the ESDL metamodel for offline documentation generation
+- Add configurable request timeouts to the EDR client
+- Fix shared default properties in GeoJSON features
+- Fix quoting of PostgreSQL column names
+- Fix sample counts when loading PostgreSQL profiles
+- Fix PostgreSQL profile loading when quantity and unit metadata is missing
+- Fix PostgreSQL metadata error logging and propagate write failures
+- Add GitHub Actions testing for Python 3.10 through 3.14 and PyPI Trusted Publishing
+
+Version 26.10
+-------------
+- Updated EnergyDataDescription (EDD) schema
+
+Version 26.9
+------------
+- Add support for ESDL release 26.9
+- Implement support for MultiPolygons
+
+Version 26.7.1
+--------------
+- Fix bug in the profile util function
+
+Version 26.7
+------------
+- Fix bug in writing postgres profile data
+
 Version 26.6.1
 --------------
 - Fix missing files for automatic ESDL version migration
